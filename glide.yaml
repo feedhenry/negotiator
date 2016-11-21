@@ -1,0 +1,32 @@
+package: github.com/feedhenry/negotiator
+import:
+- package: github.com/Sirupsen/logrus
+  version: v0.11.0
+- package: github.com/codegangsta/negroni
+  version: v0.2.0
+- package: github.com/gorilla/mux
+  version: v1.1
+- package: github.com/openshift/origin
+  version: v1.3.0
+  subpackages:
+  - pkg/build/api
+  - pkg/build/api/v1
+  - pkg/client
+  - pkg/image/api
+  - pkg/image/api/v1
+  - pkg/route/api
+  - pkg/route/api/v1
+- package: github.com/pkg/errors
+  version: v0.8.0
+- package: github.com/spf13/pflag
+- package: k8s.io/kubernetes
+  version: 52492b4bff99ef3b8ca617d385a3ff0612f9402d
+  repo: git://github.com/openshift/kubernetes.git
+  vcs: git
+  subpackages:
+  - pkg/api
+  - pkg/client/unversioned
+  - pkg/client/unversioned/clientcmd
+  - pkg/client/unversioned/clientcmd/api
+  - pkg/kubectl/cmd/util
+  - pkg/util/intstr
