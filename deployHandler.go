@@ -7,11 +7,12 @@ import (
 	"fmt"
 
 	"github.com/feedhenry/negotiator/domain/rhmap"
+	"k8s.io/kubernetes/pkg/api"
 )
 
 // PaaSService defines what the handler expects from a service interacting with the PAAS
 type PaaSService interface {
-	CreateService(namespace, serviceName, selector, description string, port int32, labels map[string]string) error
+	CreateService(namespace, serviceName, selector, description string, port int32, labels map[string]string) (*api.Service, error)
 	CreateRoute(namespace, serviceToBindTo, appName, optionalHost string, labels map[string]string) error
 	CreateImageStream(namespace, name string, labels map[string]string) error
 }
@@ -94,7 +95,7 @@ func (d DeployHandler) Deploy(res http.ResponseWriter, req *http.Request) {
 		"rhmap/project": payload.PojectGUID,
 		"rhmap/domain":  payload.Domain,
 	}
-	if err := d.paasService.CreateService(namespace, osServiceName, osCloudAppName, "rhmap cloud app", 8001, labels); err != nil {
+	if _, err := d.paasService.CreateService(namespace, osServiceName, osCloudAppName, "rhmap cloud app", 8001, labels); err != nil {
 		d.handleDeployError(err, "failed to create service ", res)
 		return
 	}
