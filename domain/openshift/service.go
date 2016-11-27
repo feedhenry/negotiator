@@ -60,7 +60,7 @@ func (s Service) CreateRoute(namespace, serviceToBindTo, appName, optionalHost s
 }
 
 // CreateService sets up a service via the Kubernetes API
-func (s Service) CreateService(namespace, serviceName, selector, description string, port int32, labels map[string]string) error {
+func (s Service) CreateService(namespace, serviceName, selector, description string, port int32, labels map[string]string) (*api.Service, error) {
 	serv := &api.Service{
 		ObjectMeta: api.ObjectMeta{
 			Name:   serviceName,
@@ -84,11 +84,12 @@ func (s Service) CreateService(namespace, serviceName, selector, description str
 			},
 		},
 	}
-	if _, err := s.client.CreateServiceInNamespace(namespace, serv); err != nil {
-		return err
+	retServ, err := s.client.CreateServiceInNamespace(namespace, serv)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	return retServ, nil
 }
 
 /**
