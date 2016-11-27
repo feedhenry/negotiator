@@ -33,4 +33,27 @@ curl -X POST  http://localhost:3000/deploy/cloudapp -d '{"guid":"testguid","name
 
 ```
 
-Note currently it just sets up a service, a route and an imagestream. 
+Note currently it just sets up a service, a route and an imagestream.
+
+## Developing
+ - Layout
+
+```bash
+.
+├── config
+├── domain #domain specfic logic 
+│   ├── openshift # our logic around openshift
+│   └── rhmap  # our logic specific to rhmap
+└── pkg
+    └── openshift # pkg for making the openshift and kubernetes client more simple to work with. Our domain logic does not go here
+##handlers go in the root dir and deal with http specific logic 
+deployHandler.go 
+sysHandler.go      
+
+``` 
+
+## Test 
+
+```bash
+make test-unit 
+```
