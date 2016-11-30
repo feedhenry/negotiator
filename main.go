@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// Logger describes an logging interface
 type Logger interface {
 	Info(args ...interface{})
 	Error(args ...interface{})
