@@ -1,6 +1,7 @@
 package openshift
 
 import (
+	bc "github.com/openshift/origin/pkg/build/api"
 	bcv1 "github.com/openshift/origin/pkg/build/api/v1"
 	ioapi "github.com/openshift/origin/pkg/image/api"
 	roapi "github.com/openshift/origin/pkg/route/api"
@@ -16,6 +17,7 @@ type PaaSClient interface {
 	CreateServiceInNamespace(ns string, svc *api.Service) (*api.Service, error)
 	CreateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route, error)
 	CreateImageStream(ns string, i *ioapi.ImageStream) (*ioapi.ImageStream, error)
+	CreateBuildConfigInNamespace(namespace string, b *bc.BuildConfig) (*bc.BuildConfig, error)
 }
 
 // Service encapsulates the domain logic for deploying our app to OpenShift
@@ -129,64 +131,6 @@ func (s Service) CreateImageStream(namespace, name string, labels map[string]str
 
 /**
 {
-        "kind": "BuildConfig",
-        "apiVersion": "v1",
-        "metadata": {
-          "name": nodejsObjectsTitle,
-          "labels" : labels,
-          "annotations" : {
-            "rhmap/description" : description,
-            "rhmap/title" : title,
-            "description": "Defines how to build the application"
-          }
-        },
-        "spec": {
-          "runPolicy": "SerialLatestOnly",
-          "source": {
-            "type": "Git",
-            "git": {
-              "uri": params.gitUrl,
-              "ref": params.gitBranch || 'master'
-            },
-            "sourceSecret" : {
-              "name": `${nodejsObjectsTitle}-scmsecret`
-            }
-          },
-          "strategy": {
-            "type": "Source",
-            "sourceStrategy": {
-              "from": {
-                "kind": "ImageStreamTag",
-                "namespace": checkParam(params, 'nodejsImageStreamNamespace'),
-                "name": checkParam(params, 'nodejsImageStreamName')
-              },
-              "env": [
-                {
-                  "name": "NODE_ENV",
-                  "value": "production"
-                }
-              ]
-            }
-          },
-          "output": {
-            "to": {
-              "kind": "ImageStreamTag",
-              "name": `${nodejsObjectsTitle}:latest`
-            }
-          },
-          "triggers": [
-            {
-              "type": "ImageChange"
-            }
-          ]
-        }
-      }
-**/
-
-// secrets
-
-/**
-{
     "apiVersion": "v1",
     "kind": "Secret",
     "type": "Opaque",
@@ -205,6 +149,72 @@ func (s Service) CreateImageStream(namespace, name string, labels map[string]str
 	}
   }
  **/
+// CreateSecret creates a secret in the OSCP
+func (s Service) CreateSecret(namespace, name string) error {
+
+	return nil
+}
+
+// CreateBuildConfig creates a buildconfig in the OSCP
+func (s Service) CreateBuildConfig(namespace, name, selector, description, gitUrl, gitBranch string, labels map[string]string) error {
+	bc := &bc.BuildConfig{
+		ObjectMeta: api.ObjectMeta{
+			Name:   name,
+			Labels: labels,
+			Annotations: map[string]string{
+				"rhmap/description": description,
+				"rhmap/title":       selector,
+				"description":       "round robin loadbalancer for your app",
+			},
+		},
+		Spec: bc.BuildConfigSpec{
+			RunPolicy: bc.BuildRunPolicySerialLatestOnly,
+			CommonSpec: bc.CommonSpec{
+				Source: bc.BuildSource{
+					Git: &bc.GitBuildSource{
+						URI: gitUrl,
+						Ref: gitBranch,
+					},
+					SourceSecret: &api.LocalObjectReference{
+						Name: name + "-scmsecret",
+					},
+				},
+				Strategy: bc.BuildStrategy{
+					SourceStrategy: &bc.SourceBuildStrategy{
+						From: api.ObjectReference{
+							Kind:      "ImageStreamTag",
+							Namespace: namespace,
+							Name:      selector + ":latest",
+						},
+						Env: []api.EnvVar{
+							{
+								Name:  "NODE_ENV",
+								Value: "production",
+							},
+						},
+					},
+				},
+				Output: bc.BuildOutput{
+					To: &api.ObjectReference{
+						Kind: "ImageStreamTag",
+						Name: name + ":latest",
+					},
+				},
+			},
+			Triggers: []bc.BuildTriggerPolicy{
+				{
+					Type: "ImageChange",
+				},
+			},
+		},
+	}
+
+	if _, err := s.client.CreateBuildConfigInNamespace(namespace, bc); err != nil {
+		return err
+	}
+
+	return nil
+}
 
 // DeploymentConfig
 
@@ -286,3 +296,7 @@ func (s Service) CreateImageStream(namespace, name string, labels map[string]str
         }
       }
 **/
+// CreateDeploymentConfig creates a deploymentconfig in the OSCP
+func (s Service) CreateDeploymentConfig(namespace, name string) error {
+	return nil
+}
