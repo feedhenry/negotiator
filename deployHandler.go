@@ -36,11 +36,13 @@ type DeployHandler struct {
 	objectNamer ObjectNamer
 }
 
+// EnvVar defines an environment variable
 type EnvVar struct {
 	Key   string `json:"key,omitempty"`
 	Value string `json:"value,omitempty"`
 }
 
+// DeployCloudAppPayload is the JSON structure sent from the client
 type DeployCloudAppPayload struct {
 	Domain      string    `json:"domain"`
 	EnvVars     []*EnvVar `json:"envVars,omitempty"`
@@ -53,22 +55,23 @@ type DeployCloudAppPayload struct {
 	RepoURL       *string  `json:"repoUrl,omitempty"`
 }
 
-func (dc *DeployCloudAppPayload) validate() (error, []string) {
+func (dc *DeployCloudAppPayload) validate() ([]string, error) {
 	// add validation here
 	// add missing fields to array
-	return nil, []string{}
+	return []string{}, nil
 }
 
 // NewDeployHandler creates a cloudApp controller.
-func NewDeployHandler(logger Logger, passService PaaSService, namer Namespacer) DeployHandler {
+func NewDeployHandler(logger Logger, paasService PaaSService, namer Namespacer) DeployHandler {
 	return DeployHandler{
 		logger:      logger,
-		paasService: passService,
+		paasService: paasService,
 		namer:       namer,
 		objectNamer: rhmap.Service{},
 	}
 }
 
+// Deploy sends the generated templates to the OpenShift PaaS
 func (d DeployHandler) Deploy(res http.ResponseWriter, req *http.Request) {
 	var (
 		encoder = json.NewEncoder(res)
@@ -82,7 +85,7 @@ func (d DeployHandler) Deploy(res http.ResponseWriter, req *http.Request) {
 		res.Write([]byte("failed to decode json"))
 		return
 	}
-	if err, missing := payload.validate(); err != nil {
+	if missing, err := payload.validate(); err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		encoder.Encode(missing)
 		return

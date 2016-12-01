@@ -11,7 +11,7 @@ Create a new OpenShift Project ``` oc new-project mine ```
 - clone this repo into $GOPATH/src/github.com/feedhenry/negotiator
 - ``` cd $GOPATH/src/github.com/feedhenry/negotiator ```
 - ``` glide i --strip-vendor ``` 
-- ``` go build . ``` (will be slow the first time but faster afterwards)
+- ``` go install``` (will be slow the first time but faster afterwards)
 - export some envars for config 
     - ``` export API_HOST="http://anopenshifthost.com:8443" ```
     - ``` export API_TOKEN="some-os-token" ```
@@ -22,7 +22,7 @@ Create a new OpenShift Project ``` oc new-project mine ```
 Start the server 
 
 ```
-./negotiator
+negotiator
 
 ```
 
