@@ -8,6 +8,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/negroni"
 	"github.com/feedhenry/negotiator/config"
+	"github.com/feedhenry/negotiator/controller"
 	"github.com/feedhenry/negotiator/domain/openshift"
 	pkgos "github.com/feedhenry/negotiator/pkg/openshift"
 	"github.com/gorilla/mux"
@@ -34,12 +35,16 @@ func buildPaasService() openshift.Service {
 	return service
 }
 
+func buildDeployController() controller.Deploy {
+	return controller.NewDeployController(buildPaasService())
+}
+
 func buildSysHandler() SysHandler {
 	return SysHandler{}
 }
 
 func buildDeployHandler() DeployHandler {
-	return NewDeployHandler(logrus.StandardLogger(), buildPaasService(), &config.Conf{})
+	return NewDeployHandler(logrus.StandardLogger(), buildDeployController(), &config.Conf{})
 }
 
 func buildHTTPHandler() http.Handler {
