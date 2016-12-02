@@ -15,6 +15,9 @@ type PaaSService interface {
 	CreateService(namespace, serviceName, selector, description string, port int32, labels map[string]string) (*api.Service, error)
 	CreateRoute(namespace, serviceToBindTo, appName, optionalHost string, labels map[string]string) error
 	CreateImageStream(namespace, name string, labels map[string]string) error
+	CreateSecret(namespace, name string) error
+	CreateBuildConfig(namespace, name, selector, description, gitUrl, gitBranch string, labels map[string]string) error
+	CreateDeploymentConfig(namespace, name string) error
 }
 
 // Namespacer is something that know what the correct namespace is
@@ -51,8 +54,9 @@ type DeployCloudAppPayload struct {
 	// this are the services you require such as redis
 	InfraServices []string `json:"infraServices,omitempty"`
 	Namespace     string   `json:"namespace"`
-	PojectGUID    string   `json:"pojectGuid"`
-	RepoURL       *string  `json:"repoUrl,omitempty"`
+	ProjectGUID   string   `json:"projectGuid"`
+	RepoURL       string   `json:"repoUrl,omitempty"`
+	RepoBranch    string   `json:"repoBranch,omitempty"`
 }
 
 func (dc *DeployCloudAppPayload) validate() ([]string, error) {
@@ -73,6 +77,7 @@ func NewDeployHandler(logger Logger, paasService PaaSService, namer Namespacer) 
 
 // Deploy sends the generated templates to the OpenShift PaaS
 func (d DeployHandler) Deploy(res http.ResponseWriter, req *http.Request) {
+	d.logger.Info("running deploy")
 	var (
 		encoder = json.NewEncoder(res)
 		decoder = json.NewDecoder(req.Body)
@@ -85,35 +90,55 @@ func (d DeployHandler) Deploy(res http.ResponseWriter, req *http.Request) {
 		res.Write([]byte("failed to decode json"))
 		return
 	}
+
+	d.logger.Info("Succesfully decoded the payload")
+
 	if missing, err := payload.validate(); err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		encoder.Encode(missing)
 		return
 	}
+
+	d.logger.Info("Succesfully validated the payload")
+
 	osServiceName := d.objectNamer.UniqueName("service", payload.GUID)
 	osCloudAppName := d.objectNamer.ConsistentName("cloud", payload.GUID)
+	osBuildConfigName := d.objectNamer.ConsistentName("buildconfig", payload.GUID)
 	namespace := d.namer.Namespace(payload.Namespace)
 	labels := map[string]string{
 		"rmmap/guid":    payload.GUID,
-		"rhmap/project": payload.PojectGUID,
+		"rhmap/project": payload.ProjectGUID,
 		"rhmap/domain":  payload.Domain,
 	}
 	if _, err := d.paasService.CreateService(namespace, osServiceName, osCloudAppName, "rhmap cloud app", 8001, labels); err != nil {
+		d.logger.Error(err)
 		d.handleDeployError(err, "failed to create service ", res)
 		return
 	}
+	d.logger.Info("deployed service")
 	if err := d.paasService.CreateRoute(namespace, osServiceName, osCloudAppName, "", labels); err != nil {
+		d.logger.Error(err)
 		d.handleDeployError(err, "failed to create route ", res)
 		return
 	}
+	d.logger.Info("deployed route")
 	if err := d.paasService.CreateImageStream(namespace, osCloudAppName, labels); err != nil {
+		d.logger.Error(err)
 		d.handleDeployError(err, "failed to create imagestream", res)
 		return
 	}
+	d.logger.Info("deployed image stream")
 
 	//create secrets
 
 	//create build config
+	d.logger.Info("deploying build config")
+	if err := d.paasService.CreateBuildConfig(namespace, osBuildConfigName, osCloudAppName, "rhmap cloud app", payload.RepoURL, payload.RepoBranch, labels); err != nil {
+		d.logger.Error(err)
+		d.handleDeployError(err, "failed to deploy build config", res)
+		return
+	}
+	d.logger.Info("deployed build config")
 
 	//create deployment config
 }

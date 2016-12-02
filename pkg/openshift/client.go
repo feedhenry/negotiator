@@ -129,3 +129,12 @@ func (c Client) CreateImageStream(ns string, i *ioapi.ImageStream) (*ioapi.Image
 	}
 	return imageStream, err
 }
+
+// CreateBuildConfigInNamespace creates the supplied build config in the supplied namespace and returns the buildconfig, or any errors that occurred
+func (c Client) CreateBuildConfigInNamespace(ns string, b *bc.BuildConfig) (*bc.BuildConfig, error) {
+	buildConfig, err := c.oc.BuildConfigs(ns).Create(b)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create BuildConfig")
+	}
+	return buildConfig, err
+}
