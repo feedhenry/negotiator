@@ -1,4 +1,4 @@
-package main
+package endpoint
 
 import (
 	"encoding/json"
@@ -9,6 +9,12 @@ import (
 	"github.com/feedhenry/negotiator/controller"
 	"github.com/feedhenry/negotiator/domain/rhmap"
 )
+
+// Logger describes a logging interface
+type Logger interface {
+	Info(args ...interface{})
+	Error(args ...interface{})
+}
 
 // Namespacer is something that know what the correct namespace is
 type Namespacer interface {
@@ -22,52 +28,52 @@ type ObjectNamer interface {
 }
 
 type DeployController interface {
-	Run(controller.DeployCmd) (interface{}, error)
+	Run(DeployCloudAppPayload) (interface{}, error)
 }
 
-// DeployHandler handles deploying to OpenShift
-type DeployHandler struct {
+// Deploy handles deploying to OpenShift
+type Deploy struct {
 	logger           Logger
 	deployController controller.Deploy
 	namer            Namespacer
 	objectNamer      ObjectNamer
 }
 
-// EnvVar defines an environment variable
-type EnvVar struct {
-	Key   string `json:"key,omitempty"`
-	Value string `json:"value,omitempty"`
-}
-
 // DeployCloudAppPayload is the JSON structure sent from the client
 type DeployCloudAppPayload struct {
-	namer       Namespacer
-	objectNamer ObjectNamer
-	Domain      string    `json:"domain"`
-	EnvVars     []*EnvVar `json:"envVars,omitempty"`
-	Environment string    `json:"environment"`
-	GUID        string    `json:"guid"`
+	namer              Namespacer
+	objectNamer        ObjectNamer
+	Domain             string               `json:"domain"`
+	EnvVars            []*controller.EnvVar `json:"envVars,omitempty"`
+	Environment        string               `json:"environment"`
+	GUID               string               `json:"guid"`
+	service            string
 	// this are the services you require such as redis
-	InfraServices []string `json:"infraServices,omitempty"`
-	Namespace     string   `json:"namespace"`
-	ProjectGUID   string   `json:"projectGuid"`
-	RepoURL       string   `json:"repoUrl,omitempty"`
-	RepoBranch    string   `json:"repoBranch,omitempty"`
-	User          string   `json:"user"`
-	Auth          string   `json:"auth"`
+	InfraServices      []string          `json:"infraServices,omitempty"`
+	Namespace          string            `json:"namespace"`
+	ProjectGUID        string            `json:"projectGuid"`
+	RepoURL            string            `json:"repoUrl,omitempty"`
+	RepoBranchOrCommit string            `json:"repoBranchOrCommit,omitempty"`
+	User               string            `json:"user"`
+	Auth               string            `json:"auth"`
+	AppTag             string            `json:"appTag"`
+	labels             map[string]string `json:"labels"`
 }
 
 func (dp *DeployCloudAppPayload) EnvironmentName() string {
 	return dp.namer.Namespace(dp.Namespace)
 }
-func (dp *DeployCloudAppPayload) CloudAppName() string {
-	return dp.objectNamer.ConsistentName("cloud", dp.GUID)
+func (dp *DeployCloudAppPayload) SetLabels(labels map[string]string) {
+	dp.labels = labels
 }
-func (dp *DeployCloudAppPayload) BuildConfigName() string {
-	return dp.objectNamer.ConsistentName("buildconfig", dp.GUID)
+func (dp *DeployCloudAppPayload) SetAppTag(tag string) {
+	dp.AppTag = tag
 }
-func (dp *DeployCloudAppPayload) ServiceName() string {
-	return dp.objectNamer.UniqueName("service", dp.GUID)
+func (dp *DeployCloudAppPayload) GetAppTag() string {
+	return dp.AppTag
+}
+func (dp *DeployCloudAppPayload) AppName() string {
+	return dp.objectNamer.ConsistentName(dp.AppTag, dp.GUID)
 }
 func (dp *DeployCloudAppPayload) CloudAppGUID() string {
 	return dp.GUID
@@ -88,18 +94,27 @@ func (dp *DeployCloudAppPayload) SourceLoc() string {
 	return dp.RepoURL
 }
 func (dp *DeployCloudAppPayload) SourceBranch() string {
-	return dp.RepoBranch
+	return dp.RepoBranchOrCommit
+}
+func (dp *DeployCloudAppPayload) AddEnvVar(name, value string) {
+	dp.EnvVars = append(dp.EnvVars, &controller.EnvVar{Key: name, Value: value})
+}
+func (dp *DeployCloudAppPayload) GetEnvVars() []*controller.EnvVar {
+	return dp.EnvVars
+}
+func (dp *DeployCloudAppPayload) Labels() map[string]string {
+	return dp.labels
 }
 
-func (dc *DeployCloudAppPayload) validate() ([]string, error) {
-	// add validation here
-	// add missing fields to array
+func (dp *DeployCloudAppPayload) validate() ([]string, error) {
+	// TODO add validation here
+	// TODO add missing fields to array
 	return []string{}, nil
 }
 
 // NewDeployHandler creates a cloudApp controller.
-func NewDeployHandler(logger Logger, deployController controller.Deploy, namer Namespacer) DeployHandler {
-	return DeployHandler{
+func NewDeployHandler(logger Logger, deployController controller.Deploy, namer Namespacer) Deploy {
+	return Deploy{
 		logger:           logger,
 		deployController: deployController,
 		namer:            namer,
@@ -108,7 +123,7 @@ func NewDeployHandler(logger Logger, deployController controller.Deploy, namer N
 }
 
 // Deploy sends the generated templates to the OpenShift PaaS
-func (d DeployHandler) Deploy(res http.ResponseWriter, req *http.Request) {
+func (d Deploy) Deploy(res http.ResponseWriter, req *http.Request) {
 	d.logger.Info("running deploy")
 	var (
 		encoder = json.NewEncoder(res)
@@ -123,13 +138,16 @@ func (d DeployHandler) Deploy(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	d.logger.Info("Succesfully decoded the payload")
-
 	if missing, err := payload.validate(); err != nil {
 		res.WriteHeader(http.StatusBadRequest)
 		encoder.Encode(missing)
 		return
 	}
+	payload.SetLabels(map[string]string{
+		"rmmap/guid":    payload.CloudAppGUID(),
+		"rhmap/project": payload.Project(),
+		"rhmap/domain":  payload.DomainName(),
+	})
 	response, err := d.deployController.Run(payload)
 	if err != nil {
 		d.logger.Error(fmt.Sprintf("failed to deploy:\n %+v", err))
@@ -147,8 +165,8 @@ func (d DeployHandler) Deploy(res http.ResponseWriter, req *http.Request) {
 	//create deployment config
 }
 
-func (d DeployHandler) handleDeployError(err error, msg string, rw http.ResponseWriter) {
-	d.logger.Error(msg)
+func (d Deploy) handleDeployError(err error, msg string, rw http.ResponseWriter) {
+	d.logger.Error(fmt.Sprintf("%s \n %+v", msg, err))
 	rw.WriteHeader(http.StatusInternalServerError)
 	rw.Write([]byte(msg))
 }

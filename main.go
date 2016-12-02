@@ -10,17 +10,10 @@ import (
 	"github.com/feedhenry/negotiator/config"
 	"github.com/feedhenry/negotiator/controller"
 	"github.com/feedhenry/negotiator/domain/openshift"
+	"github.com/feedhenry/negotiator/endpoint"
 	pkgos "github.com/feedhenry/negotiator/pkg/openshift"
 	"github.com/gorilla/mux"
 )
-
-// Logger describes an logging interface
-type Logger interface {
-	Info(args ...interface{})
-	Error(args ...interface{})
-}
-
-//this dependency building logic could endup being moved out of main.
 
 // Builds the openshift service that encapsulates logic for creating the objects via the pkg/client
 func buildPaasService() openshift.Service {
@@ -43,8 +36,8 @@ func buildSysHandler() SysHandler {
 	return SysHandler{}
 }
 
-func buildDeployHandler() DeployHandler {
-	return NewDeployHandler(logrus.StandardLogger(), buildDeployController(), &config.Conf{})
+func buildDeployHandler() endpoint.Deploy {
+	return endpoint.NewDeployHandler(logrus.StandardLogger(), buildDeployController(), &config.Conf{})
 }
 
 func buildHTTPHandler() http.Handler {
