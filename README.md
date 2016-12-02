@@ -57,3 +57,23 @@ sysHandler.go
 ```bash
 make test-unit 
 ```
+
+## build and publish
+
+```
+env GOOS=linux go build .
+
+docker build -t rhmap/negotiator:0.0.1 . ##change build number
+
+docker tag rhmap/negotiator:0.0.1 rhmap/negotiator:latest
+
+docker push rhmap/negotiator:0.0.1
+
+```
+
+## Run in OpenShift
+
+```
+oc new-app -f os_template.json --param=API_TOKEN=<YOUR_TOKEN>,API_HOST=<OpenShift_HOST>,DEPLOY_NAMESPACE=<SOME_NS>
+
+```
