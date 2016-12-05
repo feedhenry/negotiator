@@ -104,14 +104,14 @@
             "test": false,
             "selector": {
                 "run": "negotiator",
-                "name":"negotiator"
+                "name": "negotiator"
             },
             "template": {
                 "metadata": {
                     "creationTimestamp": null,
                     "labels": {
                         "run": "negotiator",
-                "name":"negotiator"
+                        "name": "negotiator"
                     }
                 },
                 "spec": {
