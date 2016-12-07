@@ -7,6 +7,8 @@ import (
 	bc "github.com/openshift/origin/pkg/build/api"
 	bcv1 "github.com/openshift/origin/pkg/build/api/v1"
 	oclient "github.com/openshift/origin/pkg/client"
+	dc "github.com/openshift/origin/pkg/deploy/api"
+	dcv1 "github.com/openshift/origin/pkg/deploy/api/v1"
 	ioapi "github.com/openshift/origin/pkg/image/api"
 	ioapi1 "github.com/openshift/origin/pkg/image/api/v1"
 	roapi "github.com/openshift/origin/pkg/route/api"
@@ -51,6 +53,8 @@ func NewClient(conf clientcmd.ClientConfig) (Client, error) {
 
 	bc.AddToScheme(api.Scheme)
 	bcv1.AddToScheme(api.Scheme)
+	dc.AddToScheme(api.Scheme)
+	dcv1.AddToScheme(api.Scheme)
 	roapi.AddToScheme(api.Scheme)
 	roapi1.AddToScheme(api.Scheme)
 	ioapi.AddToScheme(api.Scheme)
@@ -114,6 +118,14 @@ func (c Client) CreateServiceInNamespace(ns string, svc *api.Service) (*api.Serv
 	return s, err
 }
 
+func (c Client) CreateSecretInNamespace(ns string, s *api.Secret) (*api.Secret, error) {
+	s, err := c.k8.Secrets(ns).Create(s)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create service")
+	}
+	return s, err
+}
+
 func (c Client) CreateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route, error) {
 	route, err := c.oc.Routes(ns).Create(r)
 	if err != nil {
@@ -137,4 +149,13 @@ func (c Client) CreateBuildConfigInNamespace(ns string, b *bc.BuildConfig) (*bc.
 		return nil, errors.Wrap(err, "failed to create BuildConfig")
 	}
 	return buildConfig, err
+}
+
+// CreateDeployConfigInNamespace creates the supplied deploy config in the supplied namespace and returns the deployconfig, or any errors that occurred
+func (c Client) CreateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig) (*dc.DeploymentConfig, error) {
+	deployConfig, err := c.oc.DeploymentConfigs(ns).Create(d)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create DeployConfig")
+	}
+	return deployConfig, err
 }
