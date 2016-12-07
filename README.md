@@ -1,6 +1,7 @@
 ### Negotiator 
 
 Negotiator negotiates between an RHMAP core and a OpenShift instance. It understands both.
+Negotiator plays the role of being the middleman between rhmap and OpenShift. It uses the OpenShift client and Kubernetes client to directly interact with the Kubernetes API and OpenShift API. For example when a new cloud app from RHMAP needs to be deployed or a new environment needs to be created, a request will be sent to negotiator with the details required such as a giturl, an auth token, env vars etc. Negotiator will take care of turning this into the required OpenShift Objects and sending them on to OpenShift / Kubernetes directly.
 
 Try it out locally.
 
@@ -10,7 +11,6 @@ Create a new OpenShift Project ``` oc new-project mine ```
 - install glide package manager ``` curl https://glide.sh/get | sh ``` 
 - clone this repo into $GOPATH/src/github.com/feedhenry/negotiator
 - ``` cd $GOPATH/src/github.com/feedhenry/negotiator ```
-- ``` glide i --strip-vendor ``` 
 - ``` go install``` (will be slow the first time but faster afterwards)
 - export some envars for config 
     - ``` export API_HOST="http://anopenshifthost.com:8443" ```
