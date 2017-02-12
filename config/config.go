@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/pkg/errors"
 	"os"
 )
 
@@ -21,4 +22,25 @@ func (c *Conf) APIHost() string {
 
 func (c *Conf) APIToken() string {
 	return os.Getenv("API_TOKEN")
+}
+
+func (c Conf) RepoDir() string {
+	return os.Getenv("REPO_DIR")
+}
+
+func (c Conf) Validate() error {
+	var err string
+	if "" == c.APIHost() {
+		err = "Missing Needed Env Var API_HOST"
+	}
+	if "" == c.RepoDir() {
+		err += " : Missing Needed Env Var REPO_DIR"
+	}
+	if "" == c.APIToken() {
+		err += " : Missing Needed Env Var API_TOKEN"
+	}
+	if err != "" {
+		return errors.New(err)
+	}
+	return nil
 }

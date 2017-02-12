@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 	"k8s.io/kubernetes/pkg/api"
+	"k8s.io/kubernetes/pkg/api/unversioned"
 	k8client "k8s.io/kubernetes/pkg/client/unversioned"
 	"k8s.io/kubernetes/pkg/client/unversioned/clientcmd"
 	clientcmdapi "k8s.io/kubernetes/pkg/client/unversioned/clientcmd/api"
@@ -110,6 +111,32 @@ func (c Client) ListBuildConfigs(ns string) (*bcv1.BuildConfigList, error) {
 	return nil, errors.New("unable to case the returned type to a BuildConfigList")
 }
 
+// CreateBuildConfigInNamespace creates the supplied build config in the supplied namespace and returns the buildconfig, or any errors that occurred
+func (c Client) CreateBuildConfigInNamespace(ns string, b *bc.BuildConfig) (*bc.BuildConfig, error) {
+	buildConfig, err := c.oc.BuildConfigs(ns).Create(b)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create BuildConfig")
+	}
+	return buildConfig, err
+}
+
+func (c Client) InstantiateBuild(ns, buildName string) (*bc.Build, error) {
+	//{"kind":"BuildRequest","apiVersion":"v1","metadata":{"name":"cloudapp"}}
+	build, err := c.oc.BuildConfigs(ns).Instantiate(&bc.BuildRequest{
+		TypeMeta: unversioned.TypeMeta{
+			Kind:       "BuildRequest",
+			APIVersion: "v1",
+		},
+		ObjectMeta: api.ObjectMeta{
+			Name: buildName,
+		},
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create build request")
+	}
+	return build, err
+}
+
 func (c Client) CreateServiceInNamespace(ns string, svc *api.Service) (*api.Service, error) {
 	s, err := c.k8.Services(ns).Create(svc)
 	if err != nil {
@@ -137,18 +164,9 @@ func (c Client) CreateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route,
 func (c Client) CreateImageStream(ns string, i *ioapi.ImageStream) (*ioapi.ImageStream, error) {
 	imageStream, err := c.oc.ImageStreams(ns).Create(i)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to create route")
+		return nil, errors.Wrap(err, "failed to create ImageStream")
 	}
 	return imageStream, err
-}
-
-// CreateBuildConfigInNamespace creates the supplied build config in the supplied namespace and returns the buildconfig, or any errors that occurred
-func (c Client) CreateBuildConfigInNamespace(ns string, b *bc.BuildConfig) (*bc.BuildConfig, error) {
-	buildConfig, err := c.oc.BuildConfigs(ns).Create(b)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create BuildConfig")
-	}
-	return buildConfig, err
 }
 
 // CreateDeployConfigInNamespace creates the supplied deploy config in the supplied namespace and returns the deployconfig, or any errors that occurred
