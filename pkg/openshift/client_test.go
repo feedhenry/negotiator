@@ -1,1 +1,1 @@
-package openshift
+package openshift_test

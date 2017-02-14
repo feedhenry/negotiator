@@ -236,11 +236,15 @@
                   }
                 ],
                 "env": [
-                  {{range $key,$value := .EnvVars}}
+                  {{$len := len .EnvVars}}
+                  {{range $index,$envVar := .EnvVars}}
                   {
-                    "name": "{{$key}}",
-                    "value": "{{$value}}"
-                  },
+                    "name": "{{$envVar.Name}}",
+                    "value": "{{$envVar.Value}}"
+                  }
+                    {{if not (isEnd $index $len)}}
+                  ,
+                    {{end}}
                   {{end}}
                 ],
                 "resources": {

@@ -13,10 +13,13 @@ import (
 	ioapi1 "github.com/openshift/origin/pkg/image/api/v1"
 	roapi "github.com/openshift/origin/pkg/route/api"
 	roapi1 "github.com/openshift/origin/pkg/route/api/v1"
+	osapi "github.com/openshift/origin/pkg/template/api"
+	osapi1 "github.com/openshift/origin/pkg/template/api/v1"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/api/unversioned"
+	"k8s.io/kubernetes/pkg/api/v1"
 	k8client "k8s.io/kubernetes/pkg/client/unversioned"
 	"k8s.io/kubernetes/pkg/client/unversioned/clientcmd"
 	clientcmdapi "k8s.io/kubernetes/pkg/client/unversioned/clientcmd/api"
@@ -26,6 +29,20 @@ import (
 var (
 	flags = pflag.NewFlagSet("", pflag.ExitOnError)
 )
+
+func init() {
+	osapi.AddToScheme(api.Scheme)
+	osapi1.AddToScheme(api.Scheme)
+	v1.AddToScheme(api.Scheme)
+	bc.AddToScheme(api.Scheme)
+	bcv1.AddToScheme(api.Scheme)
+	dc.AddToScheme(api.Scheme)
+	dcv1.AddToScheme(api.Scheme)
+	roapi.AddToScheme(api.Scheme)
+	roapi1.AddToScheme(api.Scheme)
+	ioapi.AddToScheme(api.Scheme)
+	ioapi1.AddToScheme(api.Scheme)
+}
 
 // NewClient returns a client that wraps both kubernetes and openshift operations
 func NewClient(conf clientcmd.ClientConfig) (Client, error) {
@@ -51,15 +68,6 @@ func NewClient(conf clientcmd.ClientConfig) (Client, error) {
 	if err != nil {
 		return Client{}, errors.Wrap(err, "failed to get new oc")
 	}
-
-	bc.AddToScheme(api.Scheme)
-	bcv1.AddToScheme(api.Scheme)
-	dc.AddToScheme(api.Scheme)
-	dcv1.AddToScheme(api.Scheme)
-	roapi.AddToScheme(api.Scheme)
-	roapi1.AddToScheme(api.Scheme)
-	ioapi.AddToScheme(api.Scheme)
-	ioapi1.AddToScheme(api.Scheme)
 
 	return Client{
 		k8: kubeClient,

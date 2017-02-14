@@ -52,8 +52,13 @@ type Payload struct {
 	Domain       string            `json:"domain"`
 	Env          string            `json:"env"`
 	Replicas     int               `json:"replicas"`
-	EnvVars      map[string]string `json:"envVars"`
+	EnvVars      []*EnvVar `json:"envVars"`
 	Repo         *Repo             `json:"repo"`
+}
+
+type EnvVar struct{
+	Name string `json:"name"`
+	Value string `json:"value"`
 }
 
 // Repo represents a git repo
@@ -93,12 +98,12 @@ func New(tl TemplateLoader, td TemplateDecoder, paasClient PaaSClient) *Controll
 
 // Template deploys a set of objects based on a template. Templates are located in resources/templates
 func (c Controller) Template(template, nameSpace string, deploy *Payload) error {
-	if err := deploy.Validate(template); err != nil {
-		return err
-	}
 	tpl, err := c.templateLoader.Load(template)
 	if err != nil {
 		return errors.Wrap(err, "failed to load template "+template)
+	}
+	if err := deploy.Validate(template); err != nil {
+		return err
 	}
 	var buf bytes.Buffer
 	if err := tpl.ExecuteTemplate(&buf, template, deploy); err != nil {
@@ -131,6 +136,10 @@ func (c Controller) Template(template, nameSpace string, deploy *Payload) error 
 				return err
 			}
 		}
+	}
+	//we only need to instantiate a build if it is cloud app
+	if template != templateCloudApp{
+		return nil
 	}
 	if _, err := c.PaasClient.InstantiateBuild(nameSpace, deploy.ServiceName); err != nil {
 		return err
