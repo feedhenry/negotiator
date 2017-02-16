@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/feedhenry/negotiator/deploy"
+	"github.com/feedhenry/negotiator/pkg/openshift"
 	"github.com/gorilla/mux"
 )
 
@@ -65,8 +66,14 @@ func (d Deploy) Deploy(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err := d.deployController.Template(template, nameSpace, payload)
+	client, err := openshift.DefaultClient(payload.Target.Host, payload.Target.Token)
 	if err != nil {
+		d.logger.Error(fmt.Sprintf("failed to deploy:\n %+v", err))
+		res.WriteHeader(http.StatusUnauthorized) //make more specific
+		res.Write([]byte(err.Error()))
+		return
+	}
+	if err := d.deployController.Template(client, template, nameSpace, payload); err != nil {
 		d.logger.Error(fmt.Sprintf("failed to deploy:\n %+v", err))
 		res.WriteHeader(http.StatusInternalServerError) //make more specific
 		res.Write([]byte(err.Error()))

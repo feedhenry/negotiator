@@ -44,8 +44,14 @@ func init() {
 	ioapi1.AddToScheme(api.Scheme)
 }
 
-// NewClient returns a client that wraps both kubernetes and openshift operations
-func NewClient(conf clientcmd.ClientConfig) (Client, error) {
+// DefaultClient will return a sane default client configured for the given host and token
+func DefaultClient(host, token string) (Client, error) {
+	defaultConfig := BuildDefaultConfig(host, token)
+	return ClientFromConfig(defaultConfig)
+}
+
+// ClientFromConfig returns a client that wraps both kubernetes and openshift operations
+func ClientFromConfig(conf clientcmd.ClientConfig) (Client, error) {
 	factory := kubectlutil.NewFactory(conf)
 	var oc *oclient.Client
 	factory.BindFlags(flags)

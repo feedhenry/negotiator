@@ -2,6 +2,8 @@ package deploy
 
 import (
 	"bytes"
+	"text/template"
+
 	bc "github.com/openshift/origin/pkg/build/api"
 	bcv1 "github.com/openshift/origin/pkg/build/api/v1"
 	dc "github.com/openshift/origin/pkg/deploy/api"
@@ -10,7 +12,6 @@ import (
 	"github.com/openshift/origin/pkg/template/api"
 	"github.com/pkg/errors"
 	k8api "k8s.io/kubernetes/pkg/api"
-	"text/template"
 
 	roapi "github.com/openshift/origin/pkg/route/api"
 )
@@ -39,25 +40,30 @@ type PaaSClient interface {
 type Controller struct {
 	templateLoader  TemplateLoader
 	TemplateDecoder TemplateDecoder
-	PaasClient      PaaSClient
+	PaaSClient      PaaSClient
 }
-
 
 // Payload represents a deployment payload
 type Payload struct {
-	ServiceName  string            `json:"serviceName"`
-	Route        string            `json:"route"`
-	ProjectGuid  string            `json:"projectGuid"`
-	CloudAppGuid string            `json:"cloudAppGuid"`
-	Domain       string            `json:"domain"`
-	Env          string            `json:"env"`
-	Replicas     int               `json:"replicas"`
+	ServiceName  string    `json:"serviceName"`
+	Route        string    `json:"route"`
+	ProjectGuid  string    `json:"projectGuid"`
+	CloudAppGuid string    `json:"cloudAppGuid"`
+	Domain       string    `json:"domain"`
+	Env          string    `json:"env"`
+	Replicas     int       `json:"replicas"`
 	EnvVars      []*EnvVar `json:"envVars"`
-	Repo         *Repo             `json:"repo"`
+	Repo         *Repo     `json:"repo"`
+	Target       *Target   `json:"target"`
 }
 
-type EnvVar struct{
-	Name string `json:"name"`
+type Target struct {
+	Host  string `json:"host"`
+	Token string `json:"token"`
+}
+
+type EnvVar struct {
+	Name  string `json:"name"`
 	Value string `json:"value"`
 }
 
@@ -88,16 +94,19 @@ func (p Payload) Validate(template string) error {
 	return nil
 }
 
-func New(tl TemplateLoader, td TemplateDecoder, paasClient PaaSClient) *Controller {
+// New returns a new Controller
+func New(tl TemplateLoader, td TemplateDecoder) *Controller {
 	return &Controller{
 		templateLoader:  tl,
 		TemplateDecoder: td,
-		PaasClient:      paasClient,
 	}
 }
 
 // Template deploys a set of objects based on a template. Templates are located in resources/templates
-func (c Controller) Template(template, nameSpace string, deploy *Payload) error {
+func (c Controller) Template(client PaaSClient, template, nameSpace string, deploy *Payload) error {
+	var (
+		buf bytes.Buffer
+	)
 	tpl, err := c.templateLoader.Load(template)
 	if err != nil {
 		return errors.Wrap(err, "failed to load template "+template)
@@ -105,7 +114,6 @@ func (c Controller) Template(template, nameSpace string, deploy *Payload) error 
 	if err := deploy.Validate(template); err != nil {
 		return err
 	}
-	var buf bytes.Buffer
 	if err := tpl.ExecuteTemplate(&buf, template, deploy); err != nil {
 		return errors.Wrap(err, "failed to execute template")
 	}
@@ -116,32 +124,32 @@ func (c Controller) Template(template, nameSpace string, deploy *Payload) error 
 	for _, ob := range osTemplate.Objects {
 		switch ob.(type) {
 		case *dc.DeploymentConfig:
-			if _, err := c.PaasClient.CreateDeployConfigInNamespace(nameSpace, ob.(*dc.DeploymentConfig)); err != nil {
+			if _, err := client.CreateDeployConfigInNamespace(nameSpace, ob.(*dc.DeploymentConfig)); err != nil {
 				return err
 			}
 		case *k8api.Service:
-			if _, err := c.PaasClient.CreateServiceInNamespace(nameSpace, ob.(*k8api.Service)); err != nil {
+			if _, err := client.CreateServiceInNamespace(nameSpace, ob.(*k8api.Service)); err != nil {
 				return err
 			}
 		case *route.Route:
-			if _, err := c.PaasClient.CreateRouteInNamespace(nameSpace, ob.(*route.Route)); err != nil {
+			if _, err := client.CreateRouteInNamespace(nameSpace, ob.(*route.Route)); err != nil {
 				return err
 			}
 		case *image.ImageStream:
-			if _, err := c.PaasClient.CreateImageStream(nameSpace, ob.(*image.ImageStream)); err != nil {
+			if _, err := client.CreateImageStream(nameSpace, ob.(*image.ImageStream)); err != nil {
 				return err
 			}
 		case *bc.BuildConfig:
-			if _, err := c.PaasClient.CreateBuildConfigInNamespace(nameSpace, ob.(*bc.BuildConfig)); err != nil {
+			if _, err := client.CreateBuildConfigInNamespace(nameSpace, ob.(*bc.BuildConfig)); err != nil {
 				return err
 			}
 		}
 	}
 	//we only need to instantiate a build if it is cloud app
-	if template != templateCloudApp{
+	if template != templateCloudApp {
 		return nil
 	}
-	if _, err := c.PaasClient.InstantiateBuild(nameSpace, deploy.ServiceName); err != nil {
+	if _, err := client.InstantiateBuild(nameSpace, deploy.ServiceName); err != nil {
 		return err
 	}
 
