@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/Sirupsen/logrus"
@@ -11,23 +10,22 @@ import (
 	pkgos "github.com/feedhenry/negotiator/pkg/openshift"
 	"github.com/feedhenry/negotiator/web"
 	"github.com/gorilla/mux"
-	"github.com/pkg/errors"
 )
 
 var conf = config.Conf{}
 
 // Builds the openshift service that encapsulates logic for creating the objects via the pkg/client
-func buildPaasService() deploy.PaaSClient {
-	//TODO these will need to change for multitenant
-	host := conf.APIHost()
-	token := conf.APIToken()
-	clientConf := pkgos.BuildDefaultConfig(host, token)
-	client, err := pkgos.ClientFromConfig(clientConf)
-	if err != nil {
-		log.Fatalf("err %+v", errors.Wrap(err, "error"))
-	}
-	return client
-}
+// func buildPaasService() deploy.PaaSClient {
+// 	//TODO these will need to change for multitenant
+// 	host := conf.APIHost()
+// 	token := conf.APIToken()
+// 	clientConf := pkgos.BuildDefaultConfig(host, token)
+// 	client, err := pkgos.ClientFromConfig(clientConf)
+// 	if err != nil {
+// 		log.Fatalf("err %+v", errors.Wrap(err, "error"))
+// 	}
+// 	return client
+// }
 
 func buildDeployController() *deploy.Controller {
 	tl := pkgos.NewTemplateLoader(conf.RepoDir())
@@ -62,9 +60,6 @@ func buildHTTPHandler() http.Handler {
 }
 
 func main() {
-	if err := conf.Validate(); err != nil {
-		logrus.Fatal(err)
-	}
 	httpHandler := buildHTTPHandler()
 	port := ":3000"
 	logrus.Info("starting negotiator on  port " + port)

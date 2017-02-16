@@ -78,7 +78,7 @@ type Repo struct {
 	} `json:"auth"`
 }
 
-const templateCloudApp = "cloudApp"
+const templateCloudApp = "cloudapp"
 const templateCache = "cache"
 
 func (p Payload) Validate(template string) error {

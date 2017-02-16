@@ -1,8 +1,9 @@
 package config
 
 import (
-	"github.com/pkg/errors"
 	"os"
+
+	"github.com/pkg/errors"
 )
 
 type Conf struct {
@@ -30,14 +31,9 @@ func (c Conf) RepoDir() string {
 
 func (c Conf) Validate() error {
 	var err string
-	if "" == c.APIHost() {
-		err = "Missing Needed Env Var API_HOST"
-	}
+
 	if "" == c.RepoDir() {
 		err += " : Missing Needed Env Var REPO_DIR"
-	}
-	if "" == c.APIToken() {
-		err += " : Missing Needed Env Var API_TOKEN"
 	}
 	if err != "" {
 		return errors.New(err)
