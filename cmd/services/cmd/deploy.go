@@ -32,11 +32,15 @@ var (
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "deploys a new service to an OSCP project",
-	Long: `deploy --token=<your_oscp_token> --host=<an oscp master url> :
-
-{"repo": {"loc": "https://github.com/feedhenry/testing-cloud-app.git","ref": "master"}, "replicas": 1,"envVars":[{"name":"test","value":"test"}]}`,
+	Long: `deploy <serviceName> --token=<your_oscp_token> --host=<an oscp master url> --name=<someName> --env=environment :
+	
+	flags required when deploying a cloudapp --repo="https://github.com/feedhenry/testing-cloud-app.git" --repo-ref=master`,
 	Run: func(cmd *cobra.Command, args []string) {
 		tl := openshift.NewTemplateLoaderDecoder("")
+		if len(args) != 1 {
+			fmt.Println("error: not enough args\n", cmd.Long)
+			return
+		}
 		template := args[0]
 		deployController := deploy.New(tl, tl)
 		payload := deploy.Payload{
@@ -66,15 +70,5 @@ func init() {
 	deployCmd.Flags().StringVar(&env, "env", "", "--env=environment")
 	deployCmd.Flags().StringVar(&serviceName, "name", "", "--name=servicename")
 	RootCmd.AddCommand(deployCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// deployCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// deployCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
 }

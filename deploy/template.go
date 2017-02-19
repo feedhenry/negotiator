@@ -107,6 +107,9 @@ func (c Controller) Template(client DeployClient, template, nameSpace string, de
 	var (
 		buf bytes.Buffer
 	)
+	if nameSpace == "" {
+		return errors.New("an empty namespace cannot be provided")
+	}
 	tpl, err := c.templateLoader.Load(template)
 	if err != nil {
 		return errors.Wrap(err, "failed to load template "+template)
