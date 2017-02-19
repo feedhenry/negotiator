@@ -54,12 +54,6 @@ func (ClientFactory) DefaultDeployClient(host, token string) (deploy.DeployClien
 func ClientFromConfig(conf clientcmd.ClientConfig) (Client, error) {
 	factory := kubectlutil.NewFactory(conf)
 	var oc *oclient.Client
-	//factory.BindFlags(flags)
-	//factory.BindExternalFlags(flags)
-	// if err := flags.Parse(os.Args); err != nil {
-	// 	return Client{}, errors.Wrap(err, "failed parsing flags")
-	// }
-	// flag.CommandLine.Parse([]string{})
 	kubeClient, err := factory.Client()
 	if err != nil {
 		return Client{}, errors.Wrap(err, "failed getting a kubernetes client")

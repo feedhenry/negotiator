@@ -7,7 +7,7 @@ import:
 - package: github.com/gorilla/mux
   version: v1.1
 - package: github.com/openshift/origin
-  version: v1.3.0
+  version: v1.3.3
   subpackages:
   - pkg/build/api
   - pkg/build/api/v1

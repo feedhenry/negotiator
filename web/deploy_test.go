@@ -52,6 +52,12 @@ func TestDeploys(t *testing.T) {
 			StatusCode: 201,
 			Template:   "cache",
 		},
+		{
+			Name:       "test cloud app requires repo",
+			Body:       `{"target":{"host":"https://notthere.com:8443","token":"token"}, "serviceName": "cloudapp4","replicas": 1,  "projectGuid":"test","envVars":[{"name":"test","value":"test"}]}`,
+			StatusCode: 400,
+			Template:   "cloudapp",
+		},
 	}
 
 	server := httptest.NewServer(setUpDeployHandler())

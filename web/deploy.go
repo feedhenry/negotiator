@@ -1,5 +1,10 @@
 package web
 
+/*
+package web is responsible for the web layer. It is an out layer and depends on the inner business domains to do its work.
+It should not be required from internal business logic
+*/
+
 import (
 	"encoding/json"
 	"net/http"
@@ -19,6 +24,7 @@ type Logger interface {
 	Error(args ...interface{})
 }
 
+// DeployClientFactory defines how we want to get our OSCP and Kubernetes client
 type DeployClientFactory interface {
 	DefaultDeployClient(host, token string) (deploy.DeployClient, error)
 }
@@ -39,7 +45,7 @@ func NewDeployHandler(logger Logger, deployController *deploy.Controller, client
 	}
 }
 
-// Deploy sends the generated templates to the OpenShift PaaS
+// Deploy decodes the deploy payload. Pulls together a client which is then used to send generated templates to the OpenShift PaaS
 func (d Deploy) Deploy(res http.ResponseWriter, req *http.Request) {
 	var (
 		decoder   = json.NewDecoder(req.Body)
@@ -53,8 +59,7 @@ func (d Deploy) Deploy(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if err := payload.Validate(template); err != nil {
-		res.WriteHeader(http.StatusBadRequest)
-		res.Write([]byte(err.Error()))
+		d.handleDeployErrorWithStatus(err, http.StatusBadRequest, res)
 		return
 	}
 	client, err := d.clientFactory.DefaultDeployClient(payload.Target.Host, payload.Target.Token)

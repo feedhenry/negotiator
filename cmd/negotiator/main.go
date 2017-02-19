@@ -23,6 +23,10 @@ func main() {
 		deployController := deploy.New(templates, templates)
 		web.DeployRoute(router, logger, deployController, clientFactory)
 	}
+	// system setup
+	{
+		web.SysRoute(router)
+	}
 	//http handler
 	{
 		port := ":3000"
