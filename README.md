@@ -8,29 +8,27 @@ Try it out locally.
 Create a new OpenShift Project ``` oc new-project mine ```
 
 - ensure go 1.7 or greater installed
-- install glide package manager ``` curl https://glide.sh/get | sh ``` 
 - clone this repo into $GOPATH/src/github.com/feedhenry/negotiator
 - ``` cd $GOPATH/src/github.com/feedhenry/negotiator ```
-- ``` go install``` (will be slow the first time but faster afterwards)
-- export some envars for config 
-    - ``` export API_HOST="http://anopenshifthost.com:8443" ```
-    - ``` export API_TOKEN="some-os-token" ```
-    - ``` export DEPLOY_NAMESPACE="mine" ```
+- ``` go build``` (will be slow the first time but faster afterwards)
+- ``` ./negotiator ```
 
+In a separate terminal run the following 
 
-
-export REPO_DIR=<Negotiator Sourc Dir>/resources/templates
-go build .
-./negotiator
+```
 oc new-project se
 curl http://localhost:3000/deploy/se/cloudapp -H Content-type:application/json -d '{"repo": {"loc": "https://github.com/feedhenry/testing-cloud-app.git","ref": "master"}, "target":{"host":"AN OPENSHIFT MASTER","token":"AN OPENSHIFT TOKEN"}, "serviceName": "cloudapp4","replicas": 1,  "projectGuid":"test","envVars":[{"name":"test","value":"test"}]}'
 
 curl http://localhost:3000/deploy/se/cache -H Content-type:application/json -d '{"serviceName": "cache","replicas": 1,  "projectGuid":"test", "target":{"host":"AN OPENSHIFT MASTER","token":"AN OPENSHIFT TOKEN"}}'
-
+```
 
 ## Developing
- - Layout
 
+- install glide package manager ``` curl https://glide.sh/get | sh ``` 
+
+All dependencies are vendored so you shouldn't need to update or install. 
+
+Layout:
 ```bash
 .
 ├── config
@@ -45,11 +43,8 @@ curl http://localhost:3000/deploy/se/cache -H Content-type:application/json -d '
 │ ##handlers go in the root dir and deal with http specific logic 
 │  
 └── web 
-│     └── deploy.go 
-│     └── sys.go      
-│
-└── resources 
-         └── templates #where template definitions live
+     └── deploy.go 
+     └── sys.go      
 
 ``` 
 
