@@ -7,6 +7,7 @@ import (
 	"github.com/codegangsta/negroni"
 	"github.com/feedhenry/negotiator/deploy"
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // BuildRouter is the main place we build the mux router
@@ -33,12 +34,17 @@ func BuildHTTPHandler(r *mux.Router) http.Handler {
 // DeployRoute sets up the deploy route
 func DeployRoute(r *mux.Router, logger Logger, controller *deploy.Controller, clientFactory DeployClientFactory) {
 	deployHandler := NewDeployHandler(logger, controller, clientFactory)
-	r.HandleFunc("/deploy/{nameSpace}/{template}", deployHandler.Deploy).Methods("POST")
+	r.HandleFunc("/deploy/{nameSpace}/{template}", prometheus.InstrumentHandlerFunc("deploy", deployHandler.Deploy)).Methods("POST")
 }
 
 // SysRoute sets up the sys routes
 func SysRoute(r *mux.Router) {
 	sysHandler := SysHandler{}
-	r.HandleFunc("/sys/info/ping", sysHandler.Ping).Methods("GET")
-	r.HandleFunc("/sys/info/health", sysHandler.Health).Methods("GET")
+	r.HandleFunc("/sys/info/ping", prometheus.InstrumentHandlerFunc("ping", sysHandler.Ping)).Methods("GET")
+	r.HandleFunc("/sys/info/health", prometheus.InstrumentHandlerFunc("health", sysHandler.Health)).Methods("GET")
+}
+
+// Metrics route
+func Metrics(r *mux.Router) {
+	r.Handle("/metrics", prometheus.Handler()).Methods("GET")
 }

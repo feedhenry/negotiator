@@ -27,6 +27,10 @@ func main() {
 	{
 		web.SysRoute(router)
 	}
+	// metrics setup
+	{
+		web.Metrics(router)
+	}
 	//http handler
 	{
 		port := ":3000"

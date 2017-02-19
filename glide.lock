@@ -1,5 +1,5 @@
-hash: 1c6843a0a61bd56c925a1be0548b8b3ce47575d5c49a73e47cbfcd94084a073f
-updated: 2017-02-19T20:22:26.378489271Z
+hash: 93e44b401d0630482943a7d3822b385ed28648209772c73ab7fa19f54f4b3f53
+updated: 2017-02-19T20:54:12.392130957Z
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -303,7 +303,7 @@ imports:
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
 - name: github.com/prometheus/client_golang
-  version: 3b78d7a77f51ccbc364d4bc170920153022cfd08
+  version: c5b7fccd204277076155f10851dad72b76a49317
   subpackages:
   - prometheus
 - name: github.com/prometheus/client_model
