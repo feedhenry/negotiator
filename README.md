@@ -5,8 +5,6 @@ Negotiator plays the role of being the middleman between rhmap and OpenShift. It
 
 Try it out locally.
 
-Create a new OpenShift Project ``` oc new-project mine ```
-
 - ensure go 1.7 or greater installed
 - clone this repo into $GOPATH/src/github.com/feedhenry/negotiator
 - ``` cd $GOPATH/src/github.com/feedhenry/negotiator ```
