@@ -1,128 +1,126 @@
 {
-    kind: "Template",
-    apiVersion: "v1",
-    metadata: {
-        name: "feedhenry-negotiator",
-        annotations: {
-            description: "RHMAP fh-negotiator",
-            tags: "rhmap,mobile,go",
-            iconClass: "icon-golang"
+    "kind": "Template",
+    "apiVersion": "v1",
+    "metadata": {
+        "name": "feedhenry-negotiator",
+        "annotations": {
+            "description": "RHMAP fh-negotiator",
+            "tags": "rhmap,mobile,go",
+            "iconClass": "icon-golang"
         }
     },
-    parameters: [{
-        name: "TEMPLATES_DIR",
-        value: "",
-        description: "where the template files are located",
-        required: true
+    "parameters": [{
+        "name": "TEMPLATES_DIR",
+        "value": "",
+        "description": "where the template files are located",
+        "required": false
     }],
-    objects: [{
-        kind: "Route",
-        apiVersion: "v1",
-        metadata: {
-            name: "negotiator",
-            creationTimestamp: null,
-            labels: {
-                name: "negotiator"
+    "objects": [{
+        "kind": "Route",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "negotiator",
+            "creationTimestamp": null,
+            "labels": {
+                "name": "negotiator"
             },
-            annotations: {
-                openshift.io / host.generated: "true"
+            "annotations": {
+                "openshift.io/host.generated": "true"
             }
         },
-        spec: {
-            host: "",
-            to: {
-                kind: "Service",
-                name: "negotiator"
+        "spec": {
+            "host": "",
+            "to": {
+                "kind": "Service",
+                "name": "negotiator"
             }
         },
-        status: {
-            ingress: [{
-                host: "",
-                routerName: "router",
-                conditions: [{
-                    type: "Admitted",
-                    status: "True",
-                    lastTransitionTime: "2016-12-01T21:45:50Z"
+        "status": {
+            "ingress": [{
+                "host": "",
+                "routerName": "router",
+                "conditions": [{
+                    "type": "Admitted",
+                    "status": "True",
+                    "lastTransitionTime": "2016-12-01T21:45:50Z"
                 }]
             }]
         }
     }, {
-        kind: "Service",
-        apiVersion: "v1",
-        metadata: {
-            name: "negotiator",
-            labels: {
-                name: "negotiator"
+        "kind": "Service",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "negotiator",
+            "labels": {
+                "name": "negotiator"
             }
         },
-        spec: {
-            selector: {
-                name: "negotiator"
+        "spec": {
+            "selector": {
+                "name": "negotiator"
             },
-            ports: [{
-                port: 8080,
-                targetPort: 3000
+            "ports": [{
+                "port": 8080,
+                "targetPort": 3000
             }]
         }
     }, {
-        kind: "DeploymentConfig",
-        apiVersion: "v1",
-        metadata: {
-            name: "negotiator",
-            creationTimestamp: null,
-            labels: {
-                run: "negotiator",
-                name: "negotiator"
+        "kind": "DeploymentConfig",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "negotiator",
+            "creationTimestamp": null,
+            "labels": {
+                "run": "negotiator",
+                "name": "negotiator"
             }
         },
-        spec: {
-            strategy: {
-                type: "Rolling",
-                rollingParams: {
-                    updatePeriodSeconds: 1,
-                    intervalSeconds: 1,
-                    timeoutSeconds: 600,
-                    maxUnavailable: "25%",
-                    maxSurge: "25%"
+        "spec": {
+            "strategy": {
+                "type": "Rolling",
+                "rollingParams": {
+                    "updatePeriodSeconds": 1,
+                    "intervalSeconds": 1,
+                    "timeoutSeconds": 600,
+                    "maxUnavailable": "25%",
+                    "maxSurge": "25%"
                 },
-                resources: {}
+                "resources": {}
             },
-            triggers: [{
-                type: "ConfigChange"
+            "triggers": [{
+                "type": "ConfigChange"
             }],
-            replicas: 1,
-            test: false,
-            selector: {
-                run: "negotiator",
-                name: "negotiator"
+            "replicas": 1,
+            "selector": {
+                "run": "negotiator",
+                "name": "negotiator"
             },
-            template: {
-                metadata: {
-                    creationTimestamp: null,
-                    labels: {
-                        run: "negotiator",
-                        name: "negotiator"
+            "template": {
+                "metadata": {
+                    "creationTimestamp": null,
+                    "labels": {
+                        "run": "negotiator",
+                        "name": "negotiator"
                     }
                 },
-                spec: {
-                    containers: [{
-                        name: "negotiator",
-                        image: "rhmap/negotiator:0.0.1",
-                        env: [{
-                            name: "REPO_DIR",
-                            value: "${TEMPLATES_DIR}"
+                "spec": {
+                    "containers": [{
+                        "name": "negotiator",
+                        "image": "rhmap/negotiator:0.0.2",
+                        "env": [{
+                            "name": "REPO_DIR",
+                            "value": "${TEMPLATES_DIR}"
                         }],
-                        resources: {},
-                        terminationMessagePath: "/dev/termination-log",
-                        imagePullPolicy: "IfNotPresent"
+                        "resources": {},
+                        "terminationMessagePath": "/dev/termination-log",
+                        "imagePullPolicy": "IfNotPresent"
                     }],
-                    restartPolicy: "Always",
-                    terminationGracePeriodSeconds: 30,
-                    dnsPolicy: "ClusterFirst",
-                    securityContext: {}
+                    "restartPolicy": "Always",
+                    "terminationGracePeriodSeconds": 30,
+                    "dnsPolicy": "ClusterFirst",
+                    "securityContext": {}
                 }
             }
-        },
-        status: {}
+        }
     }]
 }
