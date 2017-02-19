@@ -15,3 +15,7 @@ func (s SysHandler) Ping(res http.ResponseWriter, req *http.Request) {
 func (s SysHandler) Health(res http.ResponseWriter, req *http.Request) {
 
 }
+
+func buildSysHandler() SysHandler {
+	return SysHandler{}
+}

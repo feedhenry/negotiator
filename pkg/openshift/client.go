@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 
+	"github.com/feedhenry/negotiator/deploy"
 	bc "github.com/openshift/origin/pkg/build/api"
 	bcv1 "github.com/openshift/origin/pkg/build/api/v1"
 	oclient "github.com/openshift/origin/pkg/client"
@@ -44,8 +45,10 @@ func init() {
 	ioapi1.AddToScheme(api.Scheme)
 }
 
-// DefaultClient will return a sane default client configured for the given host and token
-func DefaultClient(host, token string) (Client, error) {
+type ClientFactory struct{}
+
+// DefaultDeployClient will return a sane default client configured for the given host and token
+func (ClientFactory) DefaultDeployClient(host, token string) (deploy.DeployClient, error) {
 	defaultConfig := BuildDefaultConfig(host, token)
 	return ClientFromConfig(defaultConfig)
 }
