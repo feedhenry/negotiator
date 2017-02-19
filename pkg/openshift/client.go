@@ -1,9 +1,6 @@
 package openshift
 
 import (
-	"flag"
-	"os"
-
 	"github.com/feedhenry/negotiator/deploy"
 	bc "github.com/openshift/origin/pkg/build/api"
 	bcv1 "github.com/openshift/origin/pkg/build/api/v1"
@@ -57,12 +54,12 @@ func (ClientFactory) DefaultDeployClient(host, token string) (deploy.DeployClien
 func ClientFromConfig(conf clientcmd.ClientConfig) (Client, error) {
 	factory := kubectlutil.NewFactory(conf)
 	var oc *oclient.Client
-	factory.BindFlags(flags)
-	factory.BindExternalFlags(flags)
-	if err := flags.Parse(os.Args); err != nil {
-		return Client{}, errors.Wrap(err, "failed parsing flags")
-	}
-	flag.CommandLine.Parse([]string{})
+	//factory.BindFlags(flags)
+	//factory.BindExternalFlags(flags)
+	// if err := flags.Parse(os.Args); err != nil {
+	// 	return Client{}, errors.Wrap(err, "failed parsing flags")
+	// }
+	// flag.CommandLine.Parse([]string{})
 	kubeClient, err := factory.Client()
 	if err != nil {
 		return Client{}, errors.Wrap(err, "failed getting a kubernetes client")
