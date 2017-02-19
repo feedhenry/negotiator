@@ -124,21 +124,39 @@ os::cmd::expect_success "docker login -u e2e-user -p ${e2e_user_token} -e e2e-us
 echo "[INFO] Docker login successful"
 
 echo "[INFO] Tagging and pushing ruby-22-centos7 to ${DOCKER_REGISTRY}/cache/ruby-22-centos7:latest"
-os::cmd::expect_success "docker tag -f centos/ruby-22-centos7:latest ${DOCKER_REGISTRY}/cache/ruby-22-centos7:latest"
+os::cmd::expect_success "docker tag centos/ruby-22-centos7:latest ${DOCKER_REGISTRY}/cache/ruby-22-centos7:latest"
 os::cmd::expect_success "docker push ${DOCKER_REGISTRY}/cache/ruby-22-centos7:latest"
 echo "[INFO] Pushed ruby-22-centos7"
 
 # get image's digest
-rubyimagedigest=$(oc get -o jsonpath='{.status.tags[?(@.tag=="latest")].items[0].image}' is/ruby-22-centos7)
-echo "[INFO] Ruby image digest: $rubyimagedigest"
+rubyimagedigest="$(oc get -o jsonpath='{.status.tags[?(@.tag=="latest")].items[0].image}' is/ruby-22-centos7)"
+echo "[INFO] Ruby image digest: ${rubyimagedigest}"
 # get a random, non-empty blob
-rubyimageblob=$(oc get isimage -o go-template='{{range .image.dockerImageLayers}}{{if gt .size 1024.}}{{.name}},{{end}}{{end}}' ruby-22-centos7@${rubyimagedigest} | cut -d , -f 1)
-echo "[INFO] Ruby's testing blob digest: $rubyimageblob"
+rubyimageblob="$(oc get isimage -o go-template='{{range .image.dockerImageLayers}}{{if gt .size 1024.}}{{.name}},{{end}}{{end}}' "ruby-22-centos7@${rubyimagedigest}" | cut -d , -f 1)"
+echo "[INFO] Ruby's testing blob digest: ${rubyimageblob}"
 
 # verify remote images can be pulled directly from the local registry
 echo "[INFO] Docker pullthrough"
 os::cmd::expect_success "oc import-image --confirm --from=mysql:latest mysql:pullthrough"
 os::cmd::expect_success "docker pull ${DOCKER_REGISTRY}/cache/mysql:pullthrough"
+
+echo "[INFO] Docker registry refuses manifest with missing dependencies"
+os::cmd::expect_success 'oc new-project verify-manifest'
+os::cmd::expect_success "oc get -o jsonpath=$'{.dockerImageManifest}\n' 'image/${rubyimagedigest}' --context="${CLUSTER_ADMIN_CONTEXT}" >'${ARTIFACT_DIR}/rubyimagemanifest.json'"
+os::cmd::expect_success "curl --head                                                \
+    --silent                                                                        \
+    --request PUT                                                                   \
+    --header 'Content-Type: application/vnd.docker.distribution.manifest.v1+json'   \
+    --user 'e2e_user:${e2e_user_token}'                                             \
+    --upload-file '${ARTIFACT_DIR}/rubyimagemanifest.json'                          \
+    'http://${DOCKER_REGISTRY}/v2/verify-manifest/ruby-22-centos7/manifests/latest' \
+    >'${ARTIFACT_DIR}/curl-ruby-manifest-put.txt'"
+os::cmd::expect_success_and_text "cat '${ARTIFACT_DIR}/curl-ruby-manifest-put.txt'" '400 Bad Request'
+os::cmd::expect_success_and_text "cat '${ARTIFACT_DIR}/curl-ruby-manifest-put.txt'" '"errors":.*MANIFEST_BLOB_UNKNOWN'
+os::cmd::expect_success_and_text "cat '${ARTIFACT_DIR}/curl-ruby-manifest-put.txt'" '"errors":.*blob unknown to registry'
+echo "[INFO] Docker registry successfuly refused manifest with missing dependencies"
+
+os::cmd::expect_success 'oc project cache'
 
 echo "[INFO] Docker registry start with GCS"
 os::cmd::expect_failure_and_text "docker run -e REGISTRY_STORAGE=\"gcs: {}\" openshift/origin-docker-registry:${TAG}" "No bucket parameter provided"
@@ -237,7 +255,7 @@ echo "[INFO] Anonymous registry access"
 # setup: log out of docker, log into openshift as e2e-user to run policy commands, tag image to use for push attempts
 os::cmd::expect_success 'oc login -u e2e-user'
 os::cmd::expect_success 'docker pull busybox'
-os::cmd::expect_success "docker tag -f busybox ${DOCKER_REGISTRY}/missing/image:tag"
+os::cmd::expect_success "docker tag busybox ${DOCKER_REGISTRY}/missing/image:tag"
 os::cmd::expect_success "docker logout ${DOCKER_REGISTRY}"
 # unauthorized pulls return "not found" errors to anonymous users, regardless of backing data
 os::cmd::expect_failure_and_text "docker pull ${DOCKER_REGISTRY}/missing/image:tag"              "not found"
@@ -479,15 +497,15 @@ os::cmd::expect_success 'docker pull gcr.io/google_containers/pause'
 os::cmd::expect_success 'docker pull openshift/hello-openshift'
 
 # tag and push 1st image - layers unique to this image will be pruned
-os::cmd::expect_success "docker tag -f busybox ${DOCKER_REGISTRY}/cache/prune"
+os::cmd::expect_success "docker tag busybox ${DOCKER_REGISTRY}/cache/prune"
 os::cmd::expect_success "docker push ${DOCKER_REGISTRY}/cache/prune"
 
 # tag and push 2nd image - layers unique to this image will be pruned
-os::cmd::expect_success "docker tag -f openshift/hello-openshift ${DOCKER_REGISTRY}/cache/prune"
+os::cmd::expect_success "docker tag openshift/hello-openshift ${DOCKER_REGISTRY}/cache/prune"
 os::cmd::expect_success "docker push ${DOCKER_REGISTRY}/cache/prune"
 
 # tag and push 3rd image - it won't be pruned
-os::cmd::expect_success "docker tag -f gcr.io/google_containers/pause ${DOCKER_REGISTRY}/cache/prune"
+os::cmd::expect_success "docker tag gcr.io/google_containers/pause ${DOCKER_REGISTRY}/cache/prune"
 os::cmd::expect_success "docker push ${DOCKER_REGISTRY}/cache/prune"
 
 # record the storage before pruning

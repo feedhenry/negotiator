@@ -4,20 +4,18 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	"strings"
 	"time"
 
 	"github.com/golang/glog"
 
 	"k8s.io/kubernetes/pkg/admission"
-	kapi "k8s.io/kubernetes/pkg/api"
-	apierrors "k8s.io/kubernetes/pkg/api/errors"
 	"k8s.io/kubernetes/pkg/api/meta"
 	"k8s.io/kubernetes/pkg/apimachinery/registered"
 	clientset "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
 	"k8s.io/kubernetes/pkg/util/sets"
 
 	"github.com/openshift/origin/pkg/api"
+	"github.com/openshift/origin/pkg/api/latest"
 	oadmission "github.com/openshift/origin/pkg/cmd/server/admission"
 	"github.com/openshift/origin/pkg/project/cache"
 	projectutil "github.com/openshift/origin/pkg/project/util"
@@ -43,10 +41,13 @@ var recommendedCreatableResources = sets.NewString("resourceaccessreviews", "loc
 var _ = oadmission.WantsProjectCache(&lifecycle{})
 var _ = oadmission.Validator(&lifecycle{})
 
-// Admit enforces that a namespace must exist in order to associate content with it.
-// Admit enforces that a namespace that is terminating cannot accept new content being associated with it.
+// Admit enforces that a namespace must have the openshift finalizer associated with it in order to create origin API objects within it
 func (e *lifecycle) Admit(a admission.Attributes) (err error) {
 	if len(a.GetNamespace()) == 0 {
+		return nil
+	}
+	// only pay attention to origin resources
+	if !latest.OriginKind(a.GetKind()) {
 		return nil
 	}
 	// always allow a SAR request through, the SAR will return information about
@@ -68,17 +69,6 @@ func (e *lifecycle) Admit(a admission.Attributes) (err error) {
 		return nil
 	}
 
-	// we want to allow someone to delete something in case it was phantom created somehow
-	if a.GetOperation() == "DELETE" {
-		return nil
-	}
-
-	name := "Unknown"
-	obj := a.GetObject()
-	if obj != nil {
-		name, _ = meta.NewAccessor().Name(obj)
-	}
-
 	if !e.cache.Running() {
 		return admission.NewForbidden(a, err)
 	}
@@ -86,14 +76,6 @@ func (e *lifecycle) Admit(a admission.Attributes) (err error) {
 	namespace, err := e.cache.GetNamespace(a.GetNamespace())
 	if err != nil {
 		return admission.NewForbidden(a, err)
-	}
-
-	if a.GetOperation() != "CREATE" {
-		return nil
-	}
-
-	if namespace.Status.Phase == kapi.NamespaceTerminating && !e.creatableResources.Has(strings.ToLower(a.GetResource().Resource)) {
-		return apierrors.NewForbidden(a.GetResource().GroupResource(), name, fmt.Errorf("Namespace %s is terminating", a.GetNamespace()))
 	}
 
 	// in case of concurrency issues, we will retry this logic
@@ -125,7 +107,7 @@ func (e *lifecycle) Admit(a admission.Attributes) (err error) {
 }
 
 func (e *lifecycle) Handles(operation admission.Operation) bool {
-	return true
+	return operation == admission.Create
 }
 
 func (e *lifecycle) SetProjectCache(c *cache.ProjectCache) {

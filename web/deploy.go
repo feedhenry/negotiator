@@ -1,14 +1,21 @@
 package web
 
+/*
+package web is responsible for the web layer. It is an out layer and depends on the inner business domains to do its work.
+It should not be required from internal business logic
+*/
+
 import (
 	"encoding/json"
 	"net/http"
 
 	"fmt"
 
+	"os"
+
 	"github.com/feedhenry/negotiator/deploy"
-	"github.com/feedhenry/negotiator/pkg/openshift"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 )
 
 // Logger describes a logging interface
@@ -17,73 +24,75 @@ type Logger interface {
 	Error(args ...interface{})
 }
 
-// Namespacer is something that know what the correct namespace is
-type Namespacer interface {
-	Namespace(override string) string
-}
-
-// ObjectNamer knows how to name Objects for the OSCP and Kubernetes API
-type ObjectNamer interface {
-	UniqueName(prefix, guid string) string
-	ConsistentName(prefix, guid string) string
+// DeployClientFactory defines how we want to get our OSCP and Kubernetes client
+type DeployClientFactory interface {
+	DefaultDeployClient(host, token string) (deploy.DeployClient, error)
 }
 
 // Deploy handles deploying to OpenShift
 type Deploy struct {
-	logger           Logger
-	deployController *deploy.Controller
+	logger        Logger
+	deploy        *deploy.Controller
+	clientFactory DeployClientFactory
 }
 
 // NewDeployHandler creates a cloudApp controller.
-func NewDeployHandler(logger Logger, deployController *deploy.Controller) Deploy {
+func NewDeployHandler(logger Logger, deployController *deploy.Controller, clientFactory DeployClientFactory) Deploy {
 	return Deploy{
-		logger:           logger,
-		deployController: deployController,
+		logger:        logger,
+		deploy:        deployController,
+		clientFactory: clientFactory,
 	}
 }
 
-// Deploy sends the generated templates to the OpenShift PaaS
+// Deploy decodes the deploy payload. Pulls together a client which is then used to send generated templates to the OpenShift PaaS
 func (d Deploy) Deploy(res http.ResponseWriter, req *http.Request) {
-	d.logger.Info("running deploy")
 	var (
-		decoder = json.NewDecoder(req.Body)
+		decoder   = json.NewDecoder(req.Body)
+		params    = mux.Vars(req)
+		template  = params["template"]
+		nameSpace = params["nameSpace"]
+		payload   = &deploy.Payload{}
 	)
-	params := mux.Vars(req)
-	template := params["template"]
-	nameSpace := params["nameSpace"]
-
-	payload := &deploy.Payload{}
 	if err := decoder.Decode(payload); err != nil {
-		d.logger.Error("failed to decode json ", err)
-		res.WriteHeader(http.StatusBadRequest)
-		res.Write([]byte("failed to decode json"))
+		d.handleDeployError(err, "failed to decode json "+err.Error(), res)
 		return
 	}
-
 	if err := payload.Validate(template); err != nil {
-		res.WriteHeader(http.StatusBadRequest)
-		res.Write([]byte(err.Error()))
+		d.handleDeployErrorWithStatus(err, http.StatusBadRequest, res)
 		return
 	}
-
-	client, err := openshift.DefaultClient(payload.Target.Host, payload.Target.Token)
+	client, err := d.clientFactory.DefaultDeployClient(payload.Target.Host, payload.Target.Token)
 	if err != nil {
-		d.logger.Error(fmt.Sprintf("failed to deploy:\n %+v", err))
-		res.WriteHeader(http.StatusUnauthorized) //make more specific
-		res.Write([]byte(err.Error()))
+		d.handleDeployErrorWithStatus(err, http.StatusUnauthorized, res)
 		return
 	}
-	if err := d.deployController.Template(client, template, nameSpace, payload); err != nil {
-		d.logger.Error(fmt.Sprintf("failed to deploy:\n %+v", err))
-		res.WriteHeader(http.StatusInternalServerError) //make more specific
-		res.Write([]byte(err.Error()))
+	if err := d.deploy.Template(client, template, nameSpace, payload); err != nil {
+		d.handleDeployError(err, "unexpected error deploying template", res)
 		return
 	}
 	res.WriteHeader(201)
 }
 
 func (d Deploy) handleDeployError(err error, msg string, rw http.ResponseWriter) {
-	d.logger.Error(fmt.Sprintf("%s \n %+v", msg, err))
+	cause := errors.Cause(err)
+	if os.IsNotExist(cause) {
+		rw.WriteHeader(http.StatusNotFound)
+		return
+	}
+	switch err.(type) {
+	case *json.SyntaxError:
+		rw.WriteHeader(http.StatusBadRequest)
+		rw.Write([]byte(msg))
+		return
+	}
+	d.logger.Error(fmt.Sprintf(" error deploying. context: %s \n %+v", msg, err))
 	rw.WriteHeader(http.StatusInternalServerError)
 	rw.Write([]byte(msg))
+}
+
+func (d Deploy) handleDeployErrorWithStatus(err error, status int, rw http.ResponseWriter) {
+	d.logger.Error(fmt.Sprintf(" error deploying \n %+v", err))
+	rw.WriteHeader(status)
+	rw.Write([]byte(err.Error()))
 }

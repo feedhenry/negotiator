@@ -1,9 +1,7 @@
 package openshift
 
 import (
-	"flag"
-	"os"
-
+	"github.com/feedhenry/negotiator/deploy"
 	bc "github.com/openshift/origin/pkg/build/api"
 	bcv1 "github.com/openshift/origin/pkg/build/api/v1"
 	oclient "github.com/openshift/origin/pkg/client"
@@ -44,8 +42,10 @@ func init() {
 	ioapi1.AddToScheme(api.Scheme)
 }
 
-// DefaultClient will return a sane default client configured for the given host and token
-func DefaultClient(host, token string) (Client, error) {
+type ClientFactory struct{}
+
+// DefaultDeployClient will return a sane default client configured for the given host and token
+func (ClientFactory) DefaultDeployClient(host, token string) (deploy.DeployClient, error) {
 	defaultConfig := BuildDefaultConfig(host, token)
 	return ClientFromConfig(defaultConfig)
 }
@@ -54,12 +54,6 @@ func DefaultClient(host, token string) (Client, error) {
 func ClientFromConfig(conf clientcmd.ClientConfig) (Client, error) {
 	factory := kubectlutil.NewFactory(conf)
 	var oc *oclient.Client
-	factory.BindFlags(flags)
-	factory.BindExternalFlags(flags)
-	if err := flags.Parse(os.Args); err != nil {
-		return Client{}, errors.Wrap(err, "failed parsing flags")
-	}
-	flag.CommandLine.Parse([]string{})
 	kubeClient, err := factory.Client()
 	if err != nil {
 		return Client{}, errors.Wrap(err, "failed getting a kubernetes client")

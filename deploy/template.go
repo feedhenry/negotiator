@@ -24,8 +24,8 @@ type TemplateDecoder interface {
 	Decode(template []byte) (*api.Template, error)
 }
 
-// PaaSClient is the interface this controller expects for interacting with an openshift paas
-type PaaSClient interface {
+// DeployClient is the interface this controller expects for interacting with an openshift paas
+type DeployClient interface {
 	ListBuildConfigs(ns string) (*bcv1.BuildConfigList, error)
 	CreateServiceInNamespace(ns string, svc *k8api.Service) (*k8api.Service, error)
 	CreateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route, error)
@@ -40,7 +40,7 @@ type PaaSClient interface {
 type Controller struct {
 	templateLoader  TemplateLoader
 	TemplateDecoder TemplateDecoder
-	PaaSClient      PaaSClient
+	DeployClient    DeployClient
 }
 
 // Payload represents a deployment payload
@@ -103,7 +103,7 @@ func New(tl TemplateLoader, td TemplateDecoder) *Controller {
 }
 
 // Template deploys a set of objects based on a template. Templates are located in resources/templates
-func (c Controller) Template(client PaaSClient, template, nameSpace string, deploy *Payload) error {
+func (c Controller) Template(client DeployClient, template, nameSpace string, deploy *Payload) error {
 	var (
 		buf bytes.Buffer
 	)

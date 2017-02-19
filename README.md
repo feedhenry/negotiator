@@ -19,21 +19,14 @@ Create a new OpenShift Project ``` oc new-project mine ```
 
 
 
-Start the server 
+export REPO_DIR=<Negotiator Sourc Dir>/resources/templates
+go build .
+./negotiator
+oc new-project se
+curl http://localhost:3000/deploy/se/cloudapp -H Content-type:application/json -d '{"repo": {"loc": "https://github.com/feedhenry/testing-cloud-app.git","ref": "master"}, "target":{"host":"AN OPENSHIFT MASTER","token":"AN OPENSHIFT TOKEN"}, "serviceName": "cloudapp4","replicas": 1,  "projectGuid":"test","envVars":[{"name":"test","value":"test"}]}'
 
-```
-negotiator
+curl http://localhost:3000/deploy/se/cache -H Content-type:application/json -d '{"serviceName": "cache","replicas": 1,  "projectGuid":"test", "target":{"host":"AN OPENSHIFT MASTER","token":"AN OPENSHIFT TOKEN"}}'
 
-```
-
-Curl request 
-
-```
-curl -X POST  http://localhost:3000/deploy/cloudapp -d '{"guid":"testguid","namespace":"mine","domain":"testing"}'
-
-```
-
-Note currently it just sets up a service, a route and an imagestream.
 
 ## Developing
  - Layout
@@ -41,14 +34,22 @@ Note currently it just sets up a service, a route and an imagestream.
 ```bash
 .
 ├── config
-├── domain #domain specfic logic 
-│   ├── openshift # our logic around openshift
-│   └── rhmap  # our logic specific to rhmap
+│
+├── cmd # where the main.go for the server and cli are located
+│
+├── deploy #domain specfic logic for deployment
+│   ├── template.go # deploys templates to OpenShift
+│   
 └── pkg
-    └── openshift # pkg for making the openshift and kubernetes client more simple to work with. Our domain logic does not go here
-##handlers go in the root dir and deal with http specific logic 
-deployHandler.go 
-sysHandler.go      
+│    └── openshift # pkg for making the openshift and kubernetes client more simple to work with. Our domain logic does not go here
+│ ##handlers go in the root dir and deal with http specific logic 
+│  
+└── web 
+│     └── deploy.go 
+│     └── sys.go      
+│
+└── resources 
+         └── templates #where template definitions live
 
 ``` 
 

@@ -25,14 +25,14 @@ func (c *Conf) APIToken() string {
 	return os.Getenv("API_TOKEN")
 }
 
-func (c Conf) RepoDir() string {
-	return os.Getenv("REPO_DIR")
+func (c Conf) TemplateDir() string {
+	return os.Getenv("TEMPLATE_DIR")
 }
 
 func (c Conf) Validate() error {
 	var err string
 
-	if "" == c.RepoDir() {
+	if "" == c.TemplateDir() {
 		err += " : Missing Needed Env Var REPO_DIR"
 	}
 	if err != "" {
