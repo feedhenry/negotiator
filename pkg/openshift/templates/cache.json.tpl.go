@@ -50,8 +50,8 @@ var CacheTemplate = `
                     "name": "{{.ServiceName}}",
                     "rhmap/domain": "{{.Domain}}",
                     "rhmap/env": "{{.Env}}",
-                    "rhmap/guid": "{{.CloudAppGuid}}",
-                    "rhmap/project": "{{.ProjectGuid}}"
+                    "rhmap/guid": "{{.CloudAppGUID}}",
+                    "rhmap/project": "{{.ProjectGUID}}"
                 },
                 "annotations": {
                     "description": "Defines how to deploy the redis caching layer"
@@ -81,8 +81,8 @@ var CacheTemplate = `
                                             "name": "{{.ServiceName}}",
                                             "rhmap/domain": "{{.Domain}}",
                                             "rhmap/env": "{{.Env}}",
-                                            "rhmap/guid": "{{.CloudAppGuid}}",
-                                            "rhmap/project": "{{.ProjectGuid}}"
+                                            "rhmap/guid": "{{.CloudAppGUID}}",
+                                            "rhmap/project": "{{.ProjectGUID}}"
                                         }
                     },
                     "spec": {

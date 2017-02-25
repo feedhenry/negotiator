@@ -149,6 +149,9 @@ func (c Client) InstantiateBuild(ns, buildName string) (*bc.Build, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create build request")
 	}
+	if build == nil {
+		return nil, errors.New("no build returned? cannot continue")
+	}
 	return build, err
 }
 
@@ -219,6 +222,7 @@ func (c Client) FindDeploymentConfigByLabel(ns string, searchLabels map[string]s
 func (c Client) DeployLogURL(ns, dc string) string {
 	return fmt.Sprintf("%s/oapi/v1/namespaces/%s/deploymentconfigs/%s/log", c.host, ns, dc)
 }
+
 func (c Client) BuildConfigLogURL(ns, bc string) string {
 	return fmt.Sprintf("%s/oapi/v1/namespaces/%s/builds/%s/log", c.host, ns, bc)
 }

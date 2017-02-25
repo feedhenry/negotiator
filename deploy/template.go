@@ -192,11 +192,14 @@ func (c Controller) Template(client Client, template, nameSpace string, deploy *
 	}
 	//we only need to instantiate a build if it is cloud app
 	if template != templateCloudApp {
-		return nil, nil
+		comp.WatchURL = client.DeployLogURL(nameSpace, deploy.ServiceName)
+		return comp, nil
 	}
-	if _, err := client.InstantiateBuild(nameSpace, deploy.ServiceName); err != nil {
+	build, err := client.InstantiateBuild(nameSpace, deploy.ServiceName)
+	if err != nil {
 		return nil, err
 	}
+	comp.WatchURL = client.BuildConfigLogURL(nameSpace, build.Name)
 	return comp, nil
 }
 
@@ -207,11 +210,10 @@ func (c Controller) create(client Client, template *Template, nameSpace string, 
 	for _, ob := range template.Objects {
 		switch ob.(type) {
 		case *dc.DeploymentConfig:
-			dConfig, err := client.CreateDeployConfigInNamespace(nameSpace, ob.(*dc.DeploymentConfig))
+			_, err := client.CreateDeployConfigInNamespace(nameSpace, ob.(*dc.DeploymentConfig))
 			if err != nil {
 				return nil, err
 			}
-			complete.WatchURL = client.DeployLogURL(nameSpace, dConfig.Name)
 		case *k8api.Service:
 			if _, err := client.CreateServiceInNamespace(nameSpace, ob.(*k8api.Service)); err != nil {
 				return nil, err
@@ -231,14 +233,12 @@ func (c Controller) create(client Client, template *Template, nameSpace string, 
 			if _, err := client.CreateBuildConfigInNamespace(nameSpace, bConfig); err != nil {
 				return nil, err
 			}
-			complete.WatchURL = client.BuildConfigLogURL(nameSpace, bConfig.Name)
 		case *k8api.Secret:
 			if _, err := client.CreateSecretInNamespace(nameSpace, ob.(*k8api.Secret)); err != nil {
 				return nil, err
 			}
 		}
 	}
-
 	return complete, nil
 }
 
