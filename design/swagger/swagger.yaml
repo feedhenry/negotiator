@@ -1,0 +1,325 @@
+consumes:
+- application/json
+definitions:
+  DeployPayload:
+    example:
+      cloudAppGuid: Quia quia.
+      domain: Ea ipsa aliquid.
+      envVars:
+      - name: Iste eveniet pariatur tempore.
+        value: Eos blanditiis qui ad ullam sint.
+      - name: Iste eveniet pariatur tempore.
+        value: Eos blanditiis qui ad ullam sint.
+      myattribute: Molestias porro.
+      projectGuid: Quaerat quidem.
+      replicas: 7.904899e+18
+      repo:
+        loc: Qui libero fugiat a.
+        ref: Laborum cupiditate.
+      route: Nihil dolor suscipit consequatur.
+      serviceName: Repudiandae beatae nulla aut cupiditate et unde.
+      target:
+        host: Et velit ratione perferendis.
+        token: Harum voluptatem id enim molestiae corporis repudiandae.
+    properties:
+      cloudAppGuid:
+        example: Quia quia.
+        type: string
+      domain:
+        example: Ea ipsa aliquid.
+        type: string
+      envVars:
+        example:
+        - name: Iste eveniet pariatur tempore.
+          value: Eos blanditiis qui ad ullam sint.
+        - name: Iste eveniet pariatur tempore.
+          value: Eos blanditiis qui ad ullam sint.
+        items:
+          $ref: '#/definitions/EnvVar'
+        type: array
+      myattribute:
+        example: Molestias porro.
+        type: string
+      projectGuid:
+        example: Quaerat quidem.
+        type: string
+      replicas:
+        example: 7.904899e+18
+        format: int64
+        type: integer
+      repo:
+        $ref: '#/definitions/Repo'
+      route:
+        example: Nihil dolor suscipit consequatur.
+        type: string
+      serviceName:
+        example: Repudiandae beatae nulla aut cupiditate et unde.
+        type: string
+      target:
+        $ref: '#/definitions/Target'
+    required:
+    - target
+    title: DeployPayload
+    type: object
+  Deployresponse:
+    description: Deployresponse media type (default view)
+    example:
+      route: Ut consectetur quis perferendis aut dolores iste.
+      serviceName: Hic vitae aut.
+      watchURL: Quisquam laborum.
+    properties:
+      route:
+        example: Ut consectetur quis perferendis aut dolores iste.
+        type: string
+      serviceName:
+        example: Hic vitae aut.
+        type: string
+      watchURL:
+        example: Quisquam laborum.
+        type: string
+    title: 'Mediatype identifier: deployresponse'
+    type: object
+  EnvVar:
+    example:
+      name: Iste eveniet pariatur tempore.
+      value: Eos blanditiis qui ad ullam sint.
+    properties:
+      name:
+        example: Iste eveniet pariatur tempore.
+        type: string
+      value:
+        example: Eos blanditiis qui ad ullam sint.
+        type: string
+    title: EnvVar
+    type: object
+  Repo:
+    example:
+      loc: Qui libero fugiat a.
+      ref: Laborum cupiditate.
+    properties:
+      loc:
+        description: the location of the git repo
+        example: Qui libero fugiat a.
+        type: string
+      ref:
+        description: the git ref to use. Example master
+        example: Laborum cupiditate.
+        type: string
+    title: Repo
+    type: object
+  Target:
+    example:
+      host: Et velit ratione perferendis.
+      token: Harum voluptatem id enim molestiae corporis repudiandae.
+    properties:
+      host:
+        example: Et velit ratione perferendis.
+        type: string
+      token:
+        example: Harum voluptatem id enim molestiae corporis repudiandae.
+        type: string
+    title: Target
+    type: object
+  Templatesummary:
+    description: Templatesummary media type (default view)
+    example:
+      dependsOn:
+      - Error suscipit eligendi.
+      - Error suscipit eligendi.
+      - Error suscipit eligendi.
+      description: Non est similique est velit dolores quos.
+      labels:
+        Sint est ullam laboriosam consequatur suscipit laboriosam.: Nihil molestias
+          tempore.
+      name: Dolores dignissimos est quo natus.
+    properties:
+      dependsOn:
+        example:
+        - Error suscipit eligendi.
+        - Error suscipit eligendi.
+        - Error suscipit eligendi.
+        items:
+          example: Error suscipit eligendi.
+          type: string
+        type: array
+      description:
+        example: Non est similique est velit dolores quos.
+        type: string
+      labels:
+        additionalProperties: true
+        example:
+          Sint est ullam laboriosam consequatur suscipit laboriosam.: Nihil molestias
+            tempore.
+        type: object
+      name:
+        example: Dolores dignissimos est quo natus.
+        type: string
+    title: 'Mediatype identifier: templatesummary; view=default'
+    type: object
+  TemplatesummaryCollection:
+    description: TemplatesummaryCollection is the media type for an array of Templatesummary
+      (default view)
+    example:
+    - dependsOn:
+      - Error suscipit eligendi.
+      - Error suscipit eligendi.
+      - Error suscipit eligendi.
+      description: Non est similique est velit dolores quos.
+      labels:
+        Sint est ullam laboriosam consequatur suscipit laboriosam.: Nihil molestias
+          tempore.
+      name: Dolores dignissimos est quo natus.
+    - dependsOn:
+      - Error suscipit eligendi.
+      - Error suscipit eligendi.
+      - Error suscipit eligendi.
+      description: Non est similique est velit dolores quos.
+      labels:
+        Sint est ullam laboriosam consequatur suscipit laboriosam.: Nihil molestias
+          tempore.
+      name: Dolores dignissimos est quo natus.
+    items:
+      $ref: '#/definitions/Templatesummary'
+    title: 'Mediatype identifier: templatesummary; type=collection'
+    type: array
+  UpdatePayload:
+    example:
+      href: Ipsa voluptas neque neque aperiam.
+      id: Laudantium repudiandae laboriosam.
+      name: Explicabo repellat omnis similique.
+    properties:
+      href:
+        example: Ipsa voluptas neque neque aperiam.
+        type: string
+      id:
+        example: Laudantium repudiandae laboriosam.
+        type: string
+      name:
+        example: Explicabo repellat omnis similique.
+        type: string
+    required:
+    - id
+    title: UpdatePayload
+    type: object
+host: localhost:3000
+info:
+  description: A negotiator between RHMAP and OSCP
+  title: Negotiator
+  version: ""
+paths:
+  /service/{environment}/{serviceName}:
+    delete:
+      description: delete a service from an environment
+      operationId: service#delete
+      parameters:
+      - description: the name of the environment
+        in: path
+        name: environment
+        required: true
+        type: string
+      - description: the identifier for the service
+        in: path
+        name: serviceName
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+      schemes:
+      - http
+      summary: delete service
+      tags:
+      - service
+    put:
+      description: update a service in an environment
+      operationId: service#update
+      parameters:
+      - in: path
+        name: environment
+        required: true
+        type: string
+      - in: path
+        name: serviceName
+        required: true
+        type: string
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/UpdatePayload'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/Deployresponse'
+        "400":
+          description: Bad Request
+      schemes:
+      - http
+      summary: update service
+      tags:
+      - service
+  /service/deploy/{template}/{namespace}:
+    post:
+      description: deploy a service template to an environment namespace
+      operationId: service#deployTemplate
+      parameters:
+      - description: the name of the environment
+        in: path
+        name: namespace
+        required: true
+        type: string
+      - description: the name of the template you want to deploy
+        in: path
+        name: template
+        required: true
+        type: string
+      - in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/DeployPayload'
+      responses:
+        "201":
+          description: OK
+          schema:
+            $ref: '#/definitions/Deployresponse'
+        "400":
+          description: Bad Request
+        "404":
+          description: Not Found
+      schemes:
+      - http
+      summary: deployTemplate service
+      tags:
+      - service
+  /templates:
+    get:
+      description: list available templates
+      operationId: template#list
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/TemplatesummaryCollection'
+      schemes:
+      - http
+      summary: list template
+      tags:
+      - template
+produces:
+- application/json
+responses:
+  BadRequest:
+    description: Bad Request
+  NoContent:
+    description: No Content
+  NotFound:
+    description: Not Found
+schemes:
+- http
+swagger: "2.0"
