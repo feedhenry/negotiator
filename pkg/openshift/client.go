@@ -76,7 +76,7 @@ func ClientFromConfig(conf clientcmd.ClientConfig) (Client, error) {
 	return Client{
 		k8:   kubeClient,
 		oc:   oc,
-		host: host,
+		host: ocfg.Host,
 	}, nil
 }
 
