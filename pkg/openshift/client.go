@@ -1,6 +1,8 @@
 package openshift
 
 import (
+	"fmt"
+
 	"github.com/feedhenry/negotiator/deploy"
 	bc "github.com/openshift/origin/pkg/build/api"
 	bcv1 "github.com/openshift/origin/pkg/build/api/v1"
@@ -22,6 +24,8 @@ import (
 	"k8s.io/kubernetes/pkg/client/unversioned/clientcmd"
 	clientcmdapi "k8s.io/kubernetes/pkg/client/unversioned/clientcmd/api"
 	kubectlutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
+	"k8s.io/kubernetes/pkg/labels"
+	"k8s.io/kubernetes/pkg/util/sets"
 )
 
 var (
@@ -45,7 +49,7 @@ func init() {
 type ClientFactory struct{}
 
 // DefaultDeployClient will return a sane default client configured for the given host and token
-func (ClientFactory) DefaultDeployClient(host, token string) (deploy.DeployClient, error) {
+func (ClientFactory) DefaultDeployClient(host, token string) (deploy.Client, error) {
 	defaultConfig := BuildDefaultConfig(host, token)
 	return ClientFromConfig(defaultConfig)
 }
@@ -70,8 +74,9 @@ func ClientFromConfig(conf clientcmd.ClientConfig) (Client, error) {
 	}
 
 	return Client{
-		k8: kubeClient,
-		oc: oc,
+		k8:   kubeClient,
+		oc:   oc,
+		host: host,
 	}, nil
 }
 
@@ -99,8 +104,9 @@ func BuildDefaultConfig(host, token string) clientcmd.ClientConfig {
 
 // Client is an external type that wraps both kubernetes and oc
 type Client struct {
-	k8 *k8client.Client
-	oc *oclient.Client
+	k8   *k8client.Client
+	oc   *oclient.Client
+	host string
 }
 
 // ListBuildConfigs will return all build configs for the given namespace
@@ -128,6 +134,7 @@ func (c Client) CreateBuildConfigInNamespace(ns string, b *bc.BuildConfig) (*bc.
 	return buildConfig, err
 }
 
+// InstantiateBuild will kick off a build in OSCP
 func (c Client) InstantiateBuild(ns, buildName string) (*bc.Build, error) {
 	//{"kind":"BuildRequest","apiVersion":"v1","metadata":{"name":"cloudapp"}}
 	build, err := c.oc.BuildConfigs(ns).Instantiate(&bc.BuildRequest{
@@ -184,4 +191,34 @@ func (c Client) CreateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig)
 		return nil, errors.Wrap(err, "failed to create DeployConfig")
 	}
 	return deployConfig, err
+}
+
+// FindDeploymentConfigByLabel searches for a deployment config by a label selector
+func (c Client) FindDeploymentConfigByLabel(ns string, searchLabels map[string]string) (*dc.DeploymentConfig, error) {
+	selector := labels.NewSelector()
+	for k, v := range searchLabels {
+		req, err := labels.NewRequirement(k, labels.EqualsOperator, sets.NewString(v))
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create requirement to find deployment config")
+		}
+
+		selector.Add(*req)
+	}
+	l, err := c.oc.DeploymentConfigs(ns).List(api.ListOptions{
+		LabelSelector: selector,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to list deployconfig")
+	}
+	if nil == l || len(l.Items) == 0 {
+		return nil, nil
+	}
+	return &l.Items[0], nil
+}
+
+func (c Client) DeployLogURL(ns, dc string) string {
+	return fmt.Sprintf("%s/oapi/v1/namespaces/%s/deploymentconfigs/%s/log", c.host, ns, dc)
+}
+func (c Client) BuildConfigLogURL(ns, bc string) string {
+	return fmt.Sprintf("%s/oapi/v1/namespaces/%s/builds/%s/log", c.host, ns, bc)
 }

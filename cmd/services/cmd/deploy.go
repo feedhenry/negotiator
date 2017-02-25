@@ -57,7 +57,7 @@ var deployCmd = &cobra.Command{
 			fmt.Printf("error: failed to deploy template %s ", err.Error())
 			os.Exit(-1)
 		}
-		if err := deployController.Template(client, template, env, &payload); err != nil {
+		if _, err := deployController.Template(client, template, env, &payload); err != nil {
 			fmt.Printf("error: failed to deploy template %s ", err.Error())
 			os.Exit(-1)
 		}

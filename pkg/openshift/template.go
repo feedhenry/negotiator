@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"text/template"
 
+	"github.com/feedhenry/negotiator/deploy"
 	"github.com/feedhenry/negotiator/pkg/openshift/templates"
 	"github.com/pkg/errors"
 	kapi "k8s.io/kubernetes/pkg/api"
@@ -56,7 +57,7 @@ func NewTemplateLoaderDecoder(templateDir string) *templateLoaderDecoder {
 	}
 }
 
-func (tl *templateLoaderDecoder) Decode(data []byte) (*api.Template, error) {
+func (tl *templateLoaderDecoder) Decode(data []byte) (*deploy.Template, error) {
 	dec := tl.decoder
 	obj, _, err := dec.Decode(data, nil, nil)
 	if err != nil {
@@ -68,7 +69,7 @@ func (tl *templateLoaderDecoder) Decode(data []byte) (*api.Template, error) {
 		return nil, errors.New(fmt.Sprintf("top level object must be of kind Template, found %s", kind))
 	}
 
-	return tmpl, tl.resolveObjects(tmpl)
+	return &deploy.Template{Template: tmpl}, tl.resolveObjects(tmpl)
 }
 
 func (tl *templateLoaderDecoder) resolveObjects(tmpl *api.Template) error {

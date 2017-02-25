@@ -1,7 +1,10 @@
+//go:generate goagen swagger -d github.com/feedhenry/negotiator/design -o=$GOPATH/src/github.com/feedhenry/negotiator/design
 package main
 
 import (
 	"net/http"
+
+	"flag"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/feedhenry/negotiator/config"
@@ -10,17 +13,31 @@ import (
 	"github.com/feedhenry/negotiator/web"
 )
 
+var logLevel string
+
 func main() {
+	flag.StringVar(&logLevel, "log-level", "info", "use this to set log level: error, info, debug")
+	flag.Parse()
 	conf := config.Conf{}
 	clientFactory := pkgos.ClientFactory{}
 	router := web.BuildRouter()
 	logrus.SetFormatter(&logrus.JSONFormatter{})
+	switch logLevel {
+	case "info":
+		logrus.SetLevel(logrus.InfoLevel)
+	case "error":
+		logrus.SetLevel(logrus.ErrorLevel)
+	case "debug":
+		logrus.SetLevel(logrus.DebugLevel)
+	default:
+		logrus.SetLevel(logrus.ErrorLevel)
+	}
 	logger := logrus.StandardLogger()
 
 	// deploy setup
 	{
 		templates := pkgos.NewTemplateLoaderDecoder(conf.TemplateDir())
-		deployController := deploy.New(templates, templates)
+		deployController := deploy.New(templates, templates, logger)
 		web.DeployRoute(router, logger, deployController, clientFactory)
 	}
 	// system setup

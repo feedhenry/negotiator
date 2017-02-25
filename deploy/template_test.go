@@ -116,7 +116,7 @@ func TestDeploy(t *testing.T) {
 			pc := mock.NewPassClient()
 			pc.Asserts = tc.Asserts
 			dc := deploy.New(tl, tl)
-			err := dc.Template(pc, tc.Template, tc.NameSpace, tc.Payload)
+			_, err := dc.Template(pc, tc.Template, tc.NameSpace, tc.Payload)
 			if !tc.ExpectError && err != nil {
 				fmt.Printf("%+v", err)
 				t.Fatal(err)

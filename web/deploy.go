@@ -14,30 +14,25 @@ import (
 	"os"
 
 	"github.com/feedhenry/negotiator/deploy"
+	"github.com/feedhenry/negotiator/pkg/log"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
 )
 
-// Logger describes a logging interface
-type Logger interface {
-	Info(args ...interface{})
-	Error(args ...interface{})
-}
-
 // DeployClientFactory defines how we want to get our OSCP and Kubernetes client
 type DeployClientFactory interface {
-	DefaultDeployClient(host, token string) (deploy.DeployClient, error)
+	DefaultDeployClient(host, token string) (deploy.Client, error)
 }
 
 // Deploy handles deploying to OpenShift
 type Deploy struct {
-	logger        Logger
+	logger        log.Logger
 	deploy        *deploy.Controller
 	clientFactory DeployClientFactory
 }
 
 // NewDeployHandler creates a cloudApp controller.
-func NewDeployHandler(logger Logger, deployController *deploy.Controller, clientFactory DeployClientFactory) Deploy {
+func NewDeployHandler(logger log.Logger, deployController *deploy.Controller, clientFactory DeployClientFactory) Deploy {
 	return Deploy{
 		logger:        logger,
 		deploy:        deployController,
@@ -49,6 +44,7 @@ func NewDeployHandler(logger Logger, deployController *deploy.Controller, client
 func (d Deploy) Deploy(res http.ResponseWriter, req *http.Request) {
 	var (
 		decoder   = json.NewDecoder(req.Body)
+		encoder   = json.NewEncoder(res)
 		params    = mux.Vars(req)
 		template  = params["template"]
 		nameSpace = params["nameSpace"]
@@ -58,20 +54,20 @@ func (d Deploy) Deploy(res http.ResponseWriter, req *http.Request) {
 		d.handleDeployError(err, "failed to decode json "+err.Error(), res)
 		return
 	}
-	if err := payload.Validate(template); err != nil {
-		d.handleDeployErrorWithStatus(err, http.StatusBadRequest, res)
-		return
-	}
 	client, err := d.clientFactory.DefaultDeployClient(payload.Target.Host, payload.Target.Token)
 	if err != nil {
 		d.handleDeployErrorWithStatus(err, http.StatusUnauthorized, res)
 		return
 	}
-	if err := d.deploy.Template(client, template, nameSpace, payload); err != nil {
+	complete, err := d.deploy.Template(client, template, nameSpace, payload)
+	if err != nil {
 		d.handleDeployError(err, "unexpected error deploying template", res)
 		return
 	}
-	res.WriteHeader(201)
+	if err := encoder.Encode(complete); err != nil {
+		d.handleDeployError(err, "failed to encode response", res)
+		return
+	}
 }
 
 func (d Deploy) handleDeployError(err error, msg string, rw http.ResponseWriter) {
@@ -81,7 +77,7 @@ func (d Deploy) handleDeployError(err error, msg string, rw http.ResponseWriter)
 		return
 	}
 	switch err.(type) {
-	case *json.SyntaxError:
+	case *json.SyntaxError, *deploy.ErrInvalid:
 		rw.WriteHeader(http.StatusBadRequest)
 		rw.Write([]byte(msg))
 		return

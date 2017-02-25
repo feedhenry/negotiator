@@ -125,7 +125,35 @@ var CloudAppTemplate = `
         "resources": {},
         "postCommit": {}
       }
-    },
+    },{{if ne .Repo.Auth.AuthType  "" }}
+     {
+        "apiVersion": "v1",
+        "kind": "Secret",
+        "type": "Opaque",
+        "metadata": {
+        "name": "{{.ServiceName}}-scmsecret",
+        "labels" : {
+          "rhmap/domain": "{{.Domain}}",
+          "rhmap/env": "{{.Env}}",
+          "rhmap/guid": "{{.CloudAppGuid}}",
+          "rhmap/project": "{{.ProjectGuid}}"
+        },
+      "annotations" : {
+        "rhmap/description" : "cloud app git secret",
+        "rhmap/title" : "{{.ServiceName}}",
+        "description": "git secret for cloning remote repo"
+      },
+      "data":{
+        {{if eq .Repo.Auth.AuthType "http"}}
+           "username":"{{.Repo.Auth.User}}",
+           "password":"{{.Repo.Auth.Key}}"
+        {{end}}
+        {{if eq .Repo.Auth.AuthType "ssh"}}
+          "ssh-privatekey": "{{.Repo.Auth.Key}}"
+        {{end}}
+      }
+    }
+    },{{end}}
     {
       "kind": "Service",
       "apiVersion": "v1",

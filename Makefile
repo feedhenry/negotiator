@@ -49,6 +49,7 @@ build:
 deps:
 	go get github.com/c4milo/github-release
 	go get github.com/mitchellh/gox
+	go get -u github.com/goadesign/goa/...
 
 compile:
 	@rm -rf build/

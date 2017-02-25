@@ -3,11 +3,14 @@ package web
 import (
 	"net/http"
 
+	"github.com/feedhenry/negotiator/pkg/log"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/negroni"
 	"github.com/feedhenry/negotiator/deploy"
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/rs/cors"
 )
 
 // BuildRouter is the main place we build the mux router
@@ -24,6 +27,11 @@ func BuildHTTPHandler(r *mux.Router) http.Handler {
 	//add middleware for all routes
 	n := negroni.New(recovery)
 	n.UseFunc(CorrellationID)
+	n.Use(cors.New(
+		cors.Options{
+			AllowedOrigins: []string{"*"},
+		},
+	))
 	auth := Auth{logger: logrus.StandardLogger()}
 	n.UseFunc(auth.Auth)
 	// set up sys routes
@@ -32,9 +40,9 @@ func BuildHTTPHandler(r *mux.Router) http.Handler {
 }
 
 // DeployRoute sets up the deploy route
-func DeployRoute(r *mux.Router, logger Logger, controller *deploy.Controller, clientFactory DeployClientFactory) {
+func DeployRoute(r *mux.Router, logger log.Logger, controller *deploy.Controller, clientFactory DeployClientFactory) {
 	deployHandler := NewDeployHandler(logger, controller, clientFactory)
-	r.HandleFunc("/deploy/{nameSpace}/{template}", prometheus.InstrumentHandlerFunc("deploy", deployHandler.Deploy)).Methods("POST")
+	r.HandleFunc("/service/deploy/{template}/{nameSpace}", prometheus.InstrumentHandlerFunc("deployTemplate", deployHandler.Deploy)).Methods("POST")
 }
 
 // SysRoute sets up the sys routes

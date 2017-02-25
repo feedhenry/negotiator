@@ -32,3 +32,7 @@ import:
   - pkg/util/intstr
 - package: github.com/prometheus/client_golang
   version: ~0.8.0
+- package: github.com/rs/cors
+  version: ~1.0.0
+excludeDirs:
+- design

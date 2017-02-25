@@ -32,6 +32,21 @@ type PassClient struct {
 	Error   map[string]error
 }
 
+func (pc PassClient) FindDeploymentConfigByLabel(ns string, searchLabels map[string]string) (*dcapi.DeploymentConfig, error) {
+	pc.Called["FindDeploymentConfigByLabel"]++
+	if e, ok := pc.Error["FindDeploymentConfigByLabel"]; ok {
+		return nil, e
+	}
+	var ret *dcapi.DeploymentConfig
+	if pc.Returns["FindDeploymentConfigByLabel"] != nil {
+		ret = pc.Returns["FindDeploymentConfigByLabel"].(*dcapi.DeploymentConfig)
+	}
+	if assert, ok := pc.Asserts["FindDeploymentConfigByLabel"]; ok {
+		return ret, assert(ret)
+	}
+	return ret, nil
+}
+
 func (pc PassClient) ListBuildConfigs(ns string) (*bcv1.BuildConfigList, error) {
 	pc.Called["ListBuildConfigs"]++
 	if e, ok := pc.Error["ListBuildConfigs"]; ok {
