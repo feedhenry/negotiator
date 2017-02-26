@@ -137,6 +137,31 @@ func (pc PassClient) InstantiateBuild(ns, buildName string) (*bc.Build, error) {
 	return ret, nil
 }
 
+func (pc PassClient) DeployLogURL(ns, dc string) string {
+	pc.Called["DeployLogURL"]++
+	var ret string
+	if pc.Returns["DeployLogURL"] != nil {
+		ret = pc.Returns["DeployLogURL"].(string)
+	}
+	return ret
+}
+func (pc PassClient) BuildConfigLogURL(ns, dc string) string {
+	pc.Called["BuildConfigLogURL"]++
+	var ret string
+	if pc.Returns["BuildConfigLogURL"] != nil {
+		ret = pc.Returns["BuildConfigLogURL"].(string)
+	}
+	return ret
+}
+func (pc PassClient) BuildURL(ns, bc, id string) string {
+	pc.Called["BuildURL"]++
+	var ret string
+	if pc.Returns["BuildURL"] != nil {
+		ret = pc.Returns["BuildURL"].(string)
+	}
+	return ret
+}
+
 func (pc PassClient) CalledTimes(f string) int {
 	return pc.Called[f]
 }

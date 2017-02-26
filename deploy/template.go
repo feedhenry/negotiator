@@ -44,6 +44,7 @@ type Client interface {
 	FindDeploymentConfigByLabel(ns string, searchLabels map[string]string) (*dc.DeploymentConfig, error)
 	DeployLogURL(ns, dc string) string
 	BuildConfigLogURL(ns, dc string) string
+	BuildURL(ns, bc, id string) string
 }
 
 // Controller handle deploy templates to OSCP
@@ -71,6 +72,7 @@ type Payload struct {
 type Complete struct {
 	WatchURL string       `json:"watchURL"`
 	Route    *roapi.Route `json:"route"`
+	BuildURL string       `json:"buildURL"`
 }
 
 type target struct {
@@ -199,7 +201,11 @@ func (c Controller) Template(client Client, template, nameSpace string, deploy *
 	if err != nil {
 		return nil, err
 	}
+	if build == nil {
+		return nil, errors.New("no build returned from call to OSCP. Unable to continue")
+	}
 	comp.WatchURL = client.BuildConfigLogURL(nameSpace, build.Name)
+	comp.BuildURL = client.BuildURL(nameSpace, build.Name, deploy.CloudAppGUID)
 	return comp, nil
 }
 
@@ -243,10 +249,13 @@ func (c Controller) create(client Client, template *Template, nameSpace string, 
 }
 
 func (c Controller) update(client Client, dc *dc.DeploymentConfig, template *Template, nameSpace string, deploy *Payload) (*Complete, error) {
+	var (
+		complete = &Complete{}
+	)
 	// for _, c := range dc.Spec.Template.Spec.Containers{
 	// 	c.Env
 	// }
 	//update git details
 	// update env vars
-	return nil, nil
+	return complete, errors.New("redeploy not implemented")
 }

@@ -220,9 +220,13 @@ func (c Client) FindDeploymentConfigByLabel(ns string, searchLabels map[string]s
 }
 
 func (c Client) DeployLogURL(ns, dc string) string {
-	return fmt.Sprintf("%s/oapi/v1/namespaces/%s/deploymentconfigs/%s/log", c.host, ns, dc)
+	return fmt.Sprintf("%s/oapi/v1/namespaces/%s/deploymentconfigs/%s/log?follow=true", c.host, ns, dc)
 }
 
 func (c Client) BuildConfigLogURL(ns, bc string) string {
-	return fmt.Sprintf("%s/oapi/v1/namespaces/%s/builds/%s/log", c.host, ns, bc)
+	return fmt.Sprintf("%s/oapi/v1/namespaces/%s/builds/%s/log?follow=true", c.host, ns, bc)
+}
+
+func (c Client) BuildURL(ns, bc, id string) string {
+	return fmt.Sprintf("%s/oapi/v1/namespaces/%s/builds?fieldSelector=metadata.name=%s&watch=true", c.host, ns, bc)
 }

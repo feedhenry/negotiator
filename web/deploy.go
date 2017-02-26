@@ -84,7 +84,7 @@ func (d Deploy) handleDeployError(err error, msg string, rw http.ResponseWriter)
 	}
 	d.logger.Error(fmt.Sprintf(" error deploying. context: %s \n %+v", msg, err))
 	rw.WriteHeader(http.StatusInternalServerError)
-	rw.Write([]byte(msg))
+	rw.Write([]byte(msg + err.Error()))
 }
 
 func (d Deploy) handleDeployErrorWithStatus(err error, status int, rw http.ResponseWriter) {

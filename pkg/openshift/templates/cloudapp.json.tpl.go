@@ -131,28 +131,28 @@ var CloudAppTemplate = `
         "kind": "Secret",
         "type": "Opaque",
         "metadata": {
-        "name": "{{.ServiceName}}-scmsecret",
-        "labels" : {
-          "rhmap/domain": "{{.Domain}}",
-          "rhmap/env": "{{.Env}}",
-          "rhmap/guid": "{{.CloudAppGUID}}",
-          "rhmap/project": "{{.ProjectGUID}}"
+          "name": "{{.ServiceName}}-scmsecret",
+          "labels" : {
+            "rhmap/domain": "{{.Domain}}",
+            "rhmap/env": "{{.Env}}",
+            "rhmap/guid": "{{.CloudAppGUID}}",
+            "rhmap/project": "{{.ProjectGUID}}"
+          },
+          "annotations" : {
+            "rhmap/description" : "cloud app git secret",
+            "rhmap/title" : "{{.ServiceName}}",
+            "description": "git secret for cloning remote repo"
+          }
         },
-      "annotations" : {
-        "rhmap/description" : "cloud app git secret",
-        "rhmap/title" : "{{.ServiceName}}",
-        "description": "git secret for cloning remote repo"
-      },
-      "data":{
-        {{if eq .Repo.Auth.AuthType "http"}}
-           "username":"{{.Repo.Auth.User}}",
-           "password":"{{.Repo.Auth.Key}}"
-        {{end}}
-        {{if eq .Repo.Auth.AuthType "ssh"}}
-          "ssh-privatekey": "{{.Repo.Auth.Key}}"
-        {{end}}
-      }
-    }
+        "data":{
+          {{if eq .Repo.Auth.AuthType "http"}}
+            "username":"{{.Repo.Auth.User}}",
+            "password":"{{.Repo.Auth.Key}}"
+          {{end}}
+          {{if eq .Repo.Auth.AuthType "ssh"}}
+            "ssh-privatekey":"{{.Repo.Auth.Key}}" 
+          {{end}}  
+        }
     },{{end}}
     {
       "kind": "Service",
