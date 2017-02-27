@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/feedhenry/negotiator/deploy"
 	"github.com/feedhenry/negotiator/pkg/mock"
 	"github.com/feedhenry/negotiator/pkg/openshift"
+	bc "github.com/openshift/origin/pkg/build/api"
 	dcapi "github.com/openshift/origin/pkg/deploy/api"
 	"github.com/pkg/errors"
 	"k8s.io/kubernetes/pkg/api"
@@ -20,6 +22,7 @@ func TestDeploy(t *testing.T) {
 		Payload     *deploy.Payload
 		Calls       map[string]int
 		Asserts     map[string]func(interface{}) error
+		Returns     map[string]interface{}
 		ExpectError bool
 	}{
 		{
@@ -56,8 +59,8 @@ func TestDeploy(t *testing.T) {
 			Payload: &deploy.Payload{
 				ServiceName:  "cacheservice",
 				Domain:       "rhmap",
-				ProjectGuid:  "guid",
-				CloudAppGuid: "guid",
+				ProjectGUID:  "guid",
+				CloudAppGUID: "guid",
 				Env:          "env",
 				Replicas:     1,
 				EnvVars: []*deploy.EnvVar{
@@ -70,14 +73,15 @@ func TestDeploy(t *testing.T) {
 		},
 		{
 			TestName:    "test deploy cloudapp",
+			Returns:     map[string]interface{}{"InstantiateBuild": &bc.Build{ObjectMeta: api.ObjectMeta{Name: "test"}}},
 			ExpectError: false,
 			Template:    "cloudapp",
 			NameSpace:   "test",
 			Payload: &deploy.Payload{
 				ServiceName:  "cacheservice",
 				Domain:       "rhmap",
-				ProjectGuid:  "guid",
-				CloudAppGuid: "guid",
+				ProjectGUID:  "guid",
+				CloudAppGUID: "guid",
 				Env:          "env",
 				Replicas:     1,
 				EnvVars: []*deploy.EnvVar{
@@ -108,14 +112,20 @@ func TestDeploy(t *testing.T) {
 			ExpectError: true,
 			Template:    "idontexist",
 			NameSpace:   "test",
+			Payload: &deploy.Payload{
+				ServiceName: "cacheservice",
+			},
 		},
 	}
 	tl := openshift.NewTemplateLoaderDecoder("../resources/templates/")
 	for _, tc := range cases {
 		t.Run(tc.TestName, func(t *testing.T) {
 			pc := mock.NewPassClient()
+			if tc.Returns != nil {
+				pc.Returns = tc.Returns
+			}
 			pc.Asserts = tc.Asserts
-			dc := deploy.New(tl, tl)
+			dc := deploy.New(tl, tl, logrus.StandardLogger())
 			_, err := dc.Template(pc, tc.Template, tc.NameSpace, tc.Payload)
 			if !tc.ExpectError && err != nil {
 				fmt.Printf("%+v", err)

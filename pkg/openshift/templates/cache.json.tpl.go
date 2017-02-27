@@ -22,8 +22,8 @@ var CacheTemplate = `
                     "name": "{{.ServiceName}}",
                     "rhmap/domain": "{{.Domain}}",
                     "rhmap/env": "{{.Env}}",
-                    "rhmap/guid": "{{.CloudAppGuid}}",
-                    "rhmap/project": "{{.ProjectGuid}}"
+                    "rhmap/guid": "{{.CloudAppGUID}}",
+                    "rhmap/project": "{{.ProjectGUID}}"
                 }
             },
             "spec": {

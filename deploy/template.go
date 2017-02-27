@@ -63,9 +63,9 @@ type Payload struct {
 	Domain       string    `json:"domain"`
 	Env          string    `json:"env"`
 	Replicas     int       `json:"replicas"`
-	EnvVars      []*envVar `json:"envVars"`
-	Repo         *repo     `json:"repo"`
-	Target       *target   `json:"target"`
+	EnvVars      []*EnvVar `json:"envVars"`
+	Repo         *Repo     `json:"repo"`
+	Target       *Target   `json:"target"`
 }
 
 // Complete represents what is returned when a deploy completes sucessfully
@@ -75,18 +75,19 @@ type Complete struct {
 	BuildURL string       `json:"buildURL"`
 }
 
-type target struct {
+// Target is part of a Payload to deploy it is the target OSCP
+type Target struct {
 	Host  string `json:"host"`
 	Token string `json:"token"`
 }
 
-type envVar struct {
+type EnvVar struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
 }
 
-// Repo represents a git repo
-type repo struct {
+// Repo represents a git Repo
+type Repo struct {
 	Loc  string `json:"loc"`
 	Ref  string `json:"ref"`
 	Auth struct {

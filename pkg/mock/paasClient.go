@@ -12,7 +12,7 @@ import (
 
 type ClientFactory struct{}
 
-func (ClientFactory) DefaultDeployClient(host, token string) (deploy.DeployClient, error) {
+func (ClientFactory) DefaultDeployClient(host, token string) (deploy.Client, error) {
 	return NewPassClient(), nil
 }
 
