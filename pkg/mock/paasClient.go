@@ -3,16 +3,20 @@ package mock
 import (
 	"github.com/feedhenry/negotiator/deploy"
 	bc "github.com/openshift/origin/pkg/build/api"
-	bcv1 "github.com/openshift/origin/pkg/build/api/v1"
 	dcapi "github.com/openshift/origin/pkg/deploy/api"
 	ioapi "github.com/openshift/origin/pkg/image/api"
 	roapi "github.com/openshift/origin/pkg/route/api"
 	"k8s.io/kubernetes/pkg/api"
 )
 
-type ClientFactory struct{}
+type ClientFactory struct {
+	PassClient *PassClient
+}
 
-func (ClientFactory) DefaultDeployClient(host, token string) (deploy.Client, error) {
+func (cf ClientFactory) DefaultDeployClient(host, token string) (deploy.Client, error) {
+	if cf.PassClient != nil {
+		return cf.PassClient, nil
+	}
 	return NewPassClient(), nil
 }
 
@@ -47,20 +51,6 @@ func (pc PassClient) FindDeploymentConfigByLabel(ns string, searchLabels map[str
 	return ret, nil
 }
 
-func (pc PassClient) ListBuildConfigs(ns string) (*bcv1.BuildConfigList, error) {
-	pc.Called["ListBuildConfigs"]++
-	if e, ok := pc.Error["ListBuildConfigs"]; ok {
-		return nil, e
-	}
-	var ret *bcv1.BuildConfigList
-	if pc.Returns["ListBuildConfigs"] != nil {
-		ret = pc.Returns["ListBuildConfigs"].(*bcv1.BuildConfigList)
-	}
-	if assert, ok := pc.Asserts["ListBuildConfigs"]; ok {
-		return ret, assert(ret)
-	}
-	return ret, nil
-}
 func (pc PassClient) CreateServiceInNamespace(ns string, svc *api.Service) (*api.Service, error) {
 	pc.Called["CreateServiceInNamespace"]++
 	if e, ok := pc.Error["CreateServiceInNamespace"]; ok {

@@ -29,7 +29,7 @@ vet:
 
 .PHONY: test
 test-unit:
-	go test -v -cpu=2 `go list ./... | grep -v /vendor/`
+	go test -v --cover -cpu=2 `go list ./... | grep -v /vendor/`
 
 .PHONY: test-all
 test-all:

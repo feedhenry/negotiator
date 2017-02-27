@@ -8,7 +8,6 @@ import (
 	"text/template"
 
 	bc "github.com/openshift/origin/pkg/build/api"
-	bcv1 "github.com/openshift/origin/pkg/build/api/v1"
 	dc "github.com/openshift/origin/pkg/deploy/api"
 	image "github.com/openshift/origin/pkg/image/api"
 
@@ -33,7 +32,6 @@ type TemplateDecoder interface {
 
 // Client is the interface this controller expects for interacting with an openshift paas
 type Client interface {
-	ListBuildConfigs(ns string) (*bcv1.BuildConfigList, error)
 	CreateServiceInNamespace(ns string, svc *k8api.Service) (*k8api.Service, error)
 	CreateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route, error)
 	CreateImageStream(ns string, i *image.ImageStream) (*image.ImageStream, error)

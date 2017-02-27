@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"k8s.io/kubernetes/pkg/api"
+
 	"strings"
 
 	"time"
@@ -14,15 +16,19 @@ import (
 	"github.com/feedhenry/negotiator/pkg/mock"
 	"github.com/feedhenry/negotiator/pkg/openshift"
 	"github.com/feedhenry/negotiator/web"
+	bc "github.com/openshift/origin/pkg/build/api"
 )
 
 func setUpDeployHandler() http.Handler {
-	clientFactory := mock.ClientFactory{}
+	//map[string]interface{}{"InstantiateBuild": &bc.Build{ObjectMeta: api.ObjectMeta{Name: "test"}}},
+	pc := mock.NewPassClient()
+	pc.Returns = map[string]interface{}{"InstantiateBuild": &bc.Build{ObjectMeta: api.ObjectMeta{Name: "test"}}}
+	clientFactory := mock.ClientFactory{PassClient: pc}
 	router := web.BuildRouter()
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 	logger := logrus.StandardLogger()
 	templates := openshift.NewTemplateLoaderDecoder("")
-	deployController := deploy.New(templates, templates)
+	deployController := deploy.New(templates, templates, logger)
 	web.DeployRoute(router, logger, deployController, clientFactory)
 	return web.BuildHTTPHandler(router)
 }
@@ -33,30 +39,35 @@ func TestDeploys(t *testing.T) {
 		Body       string
 		StatusCode int
 		Template   string
+		NameSpace  string
 	}{
 		{
 			Name:       "test deploy cloudapp",
 			Body:       `{"repo": {"loc": "https://github.com/feedhenry/testing-cloud-app.git","ref": "master"}, "target":{"host":"https://notthere.com:8443","token":"token"}, "serviceName": "cloudapp4","replicas": 1,  "projectGuid":"test","envVars":[{"name":"test","value":"test"}]}`,
-			StatusCode: 201,
+			StatusCode: 200,
 			Template:   "cloudapp",
+			NameSpace:  "test",
 		},
 		{
 			Name:       "test deploy no template",
 			Body:       `{"repo": {"loc": "https://github.com/feedhenry/testing-cloud-app.git","ref": "master"}, "target":{"host":"https://notthere.com:8443","token":"token"}, "serviceName": "cloudapp4","replicas": 1,  "projectGuid":"test","envVars":[{"name":"test","value":"test"}]}`,
 			StatusCode: 404,
 			Template:   "notthere",
+			NameSpace:  "test",
 		},
 		{
 			Name:       "test deploy no cache",
 			Body:       `{"target":{"host":"https://notthere.com:8443","token":"token"}, "serviceName": "cloudapp4","replicas": 1,  "projectGuid":"test","envVars":[{"name":"test","value":"test"}]}`,
-			StatusCode: 201,
+			StatusCode: 200,
 			Template:   "cache",
+			NameSpace:  "test",
 		},
 		{
 			Name:       "test cloud app requires repo",
 			Body:       `{"target":{"host":"https://notthere.com:8443","token":"token"}, "serviceName": "cloudapp4","replicas": 1,  "projectGuid":"test","envVars":[{"name":"test","value":"test"}]}`,
 			StatusCode: 400,
 			Template:   "cloudapp",
+			NameSpace:  "test",
 		},
 	}
 
@@ -65,7 +76,7 @@ func TestDeploys(t *testing.T) {
 	http.DefaultClient.Timeout = time.Second * 10
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			url := server.URL + "/deploy/environment/" + tc.Template
+			url := server.URL + "/service/deploy/" + tc.Template + "/" + tc.NameSpace
 			r, err := http.NewRequest("POST", url, strings.NewReader(tc.Body))
 			if err != nil {
 				t.Fatalf("failed to create request %s ", err.Error())

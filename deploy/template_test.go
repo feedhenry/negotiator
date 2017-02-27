@@ -116,6 +116,22 @@ func TestDeploy(t *testing.T) {
 				ServiceName: "cacheservice",
 			},
 		},
+		{
+			TestName:    "test invalid template payload",
+			ExpectError: true,
+			Template:    "cache",
+			NameSpace:   "test",
+			Payload:     &deploy.Payload{},
+		},
+		{
+			TestName:    "test invalid cloudapp payload",
+			ExpectError: true,
+			Template:    "cloudapp",
+			NameSpace:   "test",
+			Payload: &deploy.Payload{
+				ServiceName: "test",
+			},
+		},
 	}
 	tl := openshift.NewTemplateLoaderDecoder("../resources/templates/")
 	for _, tc := range cases {

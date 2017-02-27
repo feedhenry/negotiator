@@ -77,7 +77,7 @@ func (d Deploy) handleDeployError(err error, msg string, rw http.ResponseWriter)
 		return
 	}
 	switch err.(type) {
-	case *json.SyntaxError, *deploy.ErrInvalid:
+	case *json.SyntaxError, deploy.ErrInvalid:
 		rw.WriteHeader(http.StatusBadRequest)
 		rw.Write([]byte(msg))
 		return

@@ -19,6 +19,7 @@ import (
 
 	"os"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/feedhenry/negotiator/deploy"
 	"github.com/feedhenry/negotiator/pkg/openshift"
 	"github.com/spf13/cobra"
@@ -42,7 +43,7 @@ var deployCmd = &cobra.Command{
 			return
 		}
 		template := args[0]
-		deployController := deploy.New(tl, tl)
+		deployController := deploy.New(tl, tl, logrus.StandardLogger())
 		payload := deploy.Payload{
 			Repo: &deploy.Repo{
 				Loc: repoLoc,
