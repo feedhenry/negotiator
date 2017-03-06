@@ -1,6 +1,7 @@
 package deploy_test
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/feedhenry/negotiator/pkg/openshift"
 	bc "github.com/openshift/origin/pkg/build/api"
 	dcapi "github.com/openshift/origin/pkg/deploy/api"
-	"github.com/pkg/errors"
 	"k8s.io/kubernetes/pkg/api"
 )
 
@@ -132,6 +132,44 @@ func TestDeploy(t *testing.T) {
 				ServiceName: "test",
 			},
 		},
+		{
+			TestName: "test redeploy cloudapp",
+			Returns: map[string]interface{}{
+				"InstantiateBuild":            &bc.Build{ObjectMeta: api.ObjectMeta{Name: "test"}},
+				"FindBuildConfigByLabel":      &bc.BuildConfig{ObjectMeta: api.ObjectMeta{Name: "test"}},
+				"FindDeploymentConfigByLabel": &dcapi.DeploymentConfig{ObjectMeta: api.ObjectMeta{Name: "test"}},
+			},
+			ExpectError: false,
+			Template:    "cloudapp",
+			NameSpace:   "test",
+			Payload: &deploy.Payload{
+				ServiceName:  "cacheservice",
+				Domain:       "rhmap",
+				ProjectGUID:  "guid",
+				CloudAppGUID: "guid",
+				Env:          "env",
+				Replicas:     1,
+				EnvVars: []*deploy.EnvVar{
+					{
+						Name:  "test",
+						Value: "test",
+					},
+					{
+						Name:  "test2",
+						Value: "test2",
+					},
+				},
+				Repo: &deploy.Repo{
+					Loc: "http://git.test.com",
+					Ref: "master",
+				},
+			},
+			Calls: map[string]int{
+				"UpdateDeployConfigInNamespace": 1,
+				"UpdateBuildConfigInNamespace":  1,
+				"UpdateRouteInNamespace":        1,
+			},
+		},
 	}
 	tl := openshift.NewTemplateLoaderDecoder("../resources/templates/")
 	for _, tc := range cases {
@@ -152,7 +190,7 @@ func TestDeploy(t *testing.T) {
 			}
 			for f, n := range tc.Calls {
 				if n != pc.CalledTimes(f) {
-					t.Errorf("Excpected %s to be called %d times", f, n)
+					t.Errorf("Expected %s to be called %d times", f, n)
 				}
 			}
 		})

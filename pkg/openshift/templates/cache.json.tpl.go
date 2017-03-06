@@ -1,5 +1,6 @@
 package templates
 
+//CacheTemplate defines the template for deploying a cache environment service to openshift 3
 var CacheTemplate = `
 {{define "cache"}}
 {
