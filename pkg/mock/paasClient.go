@@ -51,6 +51,21 @@ func (pc PassClient) FindDeploymentConfigByLabel(ns string, searchLabels map[str
 	return ret, nil
 }
 
+func (pc PassClient) FindBuildConfigByLabel(ns string, searchLabels map[string]string) (*bc.BuildConfig, error) {
+	pc.Called["FindBuildConfigByLabel"]++
+	if e, ok := pc.Error["FindBuildConfigByLabel"]; ok {
+		return nil, e
+	}
+	var ret *bc.BuildConfig
+	if pc.Returns["FindBuildConfigByLabel"] != nil {
+		ret = pc.Returns["FindBuildConfigByLabel"].(*bc.BuildConfig)
+	}
+	if assert, ok := pc.Asserts["FindBuildConfigByLabel"]; ok {
+		return ret, assert(ret)
+	}
+	return ret, nil
+}
+
 func (pc PassClient) CreateServiceInNamespace(ns string, svc *api.Service) (*api.Service, error) {
 	pc.Called["CreateServiceInNamespace"]++
 	if e, ok := pc.Error["CreateServiceInNamespace"]; ok {
@@ -61,6 +76,7 @@ func (pc PassClient) CreateServiceInNamespace(ns string, svc *api.Service) (*api
 	}
 	return svc, nil
 }
+
 func (pc PassClient) CreateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route, error) {
 	pc.Called["CreateRouteInNamespace"]++
 	if e, ok := pc.Error["CreateRouteInNamespace"]; ok {
@@ -71,6 +87,18 @@ func (pc PassClient) CreateRouteInNamespace(ns string, r *roapi.Route) (*roapi.R
 	}
 	return r, nil
 }
+
+func (pc PassClient) UpdateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route, error) {
+	pc.Called["UpdateRouteInNamespace"]++
+	if e, ok := pc.Error["UpdateRouteInNamespace"]; ok {
+		return nil, e
+	}
+	if assert, ok := pc.Asserts["UpdateRouteInNamespace"]; ok {
+		return r, assert(r)
+	}
+	return r, nil
+}
+
 func (pc PassClient) CreateImageStream(ns string, i *ioapi.ImageStream) (*ioapi.ImageStream, error) {
 	pc.Called["CreateImageStream"]++
 	if e, ok := pc.Error["CreateImageStream"]; ok {
@@ -91,6 +119,18 @@ func (pc PassClient) CreateBuildConfigInNamespace(namespace string, b *bc.BuildC
 	}
 	return b, nil
 }
+
+func (pc PassClient) UpdateBuildConfigInNamespace(namespace string, b *bc.BuildConfig) (*bc.BuildConfig, error) {
+	pc.Called["UpdateBuildConfigInNamespace"]++
+	if e, ok := pc.Error["UpdateBuildConfigInNamespace"]; ok {
+		return nil, e
+	}
+	if assert, ok := pc.Asserts["UpdateBuildConfigInNamespace"]; ok {
+		return b, assert(b)
+	}
+	return b, nil
+}
+
 func (pc PassClient) CreateDeployConfigInNamespace(namespace string, d *dcapi.DeploymentConfig) (*dcapi.DeploymentConfig, error) {
 	pc.Called["CreateDeployConfigInNamespace"]++
 	if e, ok := pc.Error["CreateDeployConfigInNamespace"]; ok {
@@ -101,6 +141,18 @@ func (pc PassClient) CreateDeployConfigInNamespace(namespace string, d *dcapi.De
 	}
 	return d, nil
 }
+
+func (pc PassClient) UpdateDeployConfigInNamespace(namespace string, d *dcapi.DeploymentConfig) (*dcapi.DeploymentConfig, error) {
+	pc.Called["UpdateDeployConfigInNamespace"]++
+	if e, ok := pc.Error["UpdateDeployConfigInNamespace"]; ok {
+		return nil, e
+	}
+	if assert, ok := pc.Asserts["UpdateDeployConfigInNamespace"]; ok {
+		return d, assert(d)
+	}
+	return d, nil
+}
+
 func (pc PassClient) CreateSecretInNamespace(namespace string, s *api.Secret) (*api.Secret, error) {
 	pc.Called["CreateSecretInNamespace"]++
 	if e, ok := pc.Error["CreateSecretInNamespace"]; ok {
