@@ -13,6 +13,7 @@ import (
 
 	"os"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/feedhenry/negotiator/deploy"
 	"github.com/feedhenry/negotiator/pkg/log"
 	"github.com/gorilla/mux"
@@ -61,13 +62,16 @@ func (d Deploy) Deploy(res http.ResponseWriter, req *http.Request) {
 	}
 	complete, err := d.deploy.Template(client, template, nameSpace, payload)
 	if err != nil {
-		d.handleDeployError(err, "unexpected error deploying template", res)
+		d.handleDeployError(err, "unexpected error deploying template: ", res)
 		return
 	}
+	logrus.Info("sending response")
+	logrus.Info(complete)
 	if err := encoder.Encode(complete); err != nil {
-		d.handleDeployError(err, "failed to encode response", res)
+		d.handleDeployError(err, "failed to encode response: ", res)
 		return
 	}
+	logrus.Info("completed")
 }
 
 func (d Deploy) handleDeployError(err error, msg string, rw http.ResponseWriter) {

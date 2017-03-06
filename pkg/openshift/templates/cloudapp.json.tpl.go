@@ -1,5 +1,6 @@
 package templates
 
+//CloudAppTemplate defines the template for deploying a cloud app to openshift 3
 var CloudAppTemplate = `
 {{define "cloudapp"}}
 {
@@ -27,7 +28,7 @@ var CloudAppTemplate = `
           "annotations": {
               "description": "Keeps track of changes in the application image",
               "rhmap/description": "",
-              "rhmap/title": "Cloud App"
+              "rhmap/title": "{{.ServiceName}}"
           }
       }
   },
@@ -45,7 +46,7 @@ var CloudAppTemplate = `
         },
         "annotations": {
           "rhmap/description": "",
-          "rhmap/title": "Cloud App"
+          "rhmap/title": "{{.ServiceName}}"
         }
       },
       "spec": {
@@ -76,7 +77,7 @@ var CloudAppTemplate = `
         "annotations": {
           "description": "Defines how to build the application",
           "rhmap/description": "",
-          "rhmap/title": "Cloud App"
+          "rhmap/title": "{{.ServiceName}}"
         }
       },
       "spec": {
@@ -169,7 +170,7 @@ var CloudAppTemplate = `
         "annotations": {
           "description": "Exposes and load balances the application pods",
           "rhmap/description": "",
-          "rhmap/title": "Cloud App"
+          "rhmap/title": "{{.ServiceName}}"
         }
       },
       "spec": {
@@ -206,7 +207,7 @@ var CloudAppTemplate = `
         "annotations": {
           "description": "Defines how to deploy the application server",
           "rhmap/description": "",
-          "rhmap/title": "Cloud App"
+          "rhmap/title": "{{.ServiceName}}"
         }
       },
       "spec": {
@@ -234,9 +235,6 @@ var CloudAppTemplate = `
                 "name": "{{.ServiceName}}:latest"
               }
             }
-          },
-          {
-            "type": "ConfigChange"
           }
         ],
         "replicas": {{.Replicas}},

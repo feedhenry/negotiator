@@ -38,8 +38,12 @@ type Client interface {
 	CreateBuildConfigInNamespace(namespace string, b *bc.BuildConfig) (*bc.BuildConfig, error)
 	CreateDeployConfigInNamespace(namespace string, d *dc.DeploymentConfig) (*dc.DeploymentConfig, error)
 	CreateSecretInNamespace(namespace string, s *k8api.Secret) (*k8api.Secret, error)
+	UpdateBuildConfigInNamespace(namespace string, b *bc.BuildConfig) (*bc.BuildConfig, error)
+	UpdateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig) (*dc.DeploymentConfig, error)
+	UpdateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route, error)
 	InstantiateBuild(ns, buildName string) (*bc.Build, error)
 	FindDeploymentConfigByLabel(ns string, searchLabels map[string]string) (*dc.DeploymentConfig, error)
+	FindBuildConfigByLabel(ns string, searchLabels map[string]string) (*bc.BuildConfig, error)
 	DeployLogURL(ns, dc string) string
 	BuildConfigLogURL(ns, dc string) string
 	BuildURL(ns, bc, id string) string
@@ -79,6 +83,7 @@ type Target struct {
 	Token string `json:"token"`
 }
 
+// EnvVar defines an environment variables name and value
 type EnvVar struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
@@ -180,15 +185,20 @@ func (c Controller) Template(client Client, template, nameSpace string, deploy *
 	if err != nil {
 		return nil, errors.Wrap(err, "error trying to find deployment config")
 	}
-	if nil == dc {
+	bc, err := client.FindBuildConfigByLabel(nameSpace, map[string]string{"rhmap/guid": deploy.CloudAppGUID, "rhmap/title": deploy.ServiceName})
+	if err != nil {
+		return nil, errors.Wrap(err, "error trying to find build config")
+	}
+
+	if nil == dc || nil == bc {
 		comp, err = c.create(client, osTemplate, nameSpace, deploy)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		comp, err = c.update(client, dc, osTemplate, nameSpace, deploy)
+		comp, err = c.update(client, dc, bc, osTemplate, nameSpace, deploy)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Error updating deploy: ")
 		}
 	}
 	//we only need to instantiate a build if it is cloud app
@@ -196,6 +206,7 @@ func (c Controller) Template(client Client, template, nameSpace string, deploy *
 		comp.WatchURL = client.DeployLogURL(nameSpace, deploy.ServiceName)
 		return comp, nil
 	}
+
 	build, err := client.InstantiateBuild(nameSpace, deploy.ServiceName)
 	if err != nil {
 		return nil, err
@@ -203,6 +214,7 @@ func (c Controller) Template(client Client, template, nameSpace string, deploy *
 	if build == nil {
 		return nil, errors.New("no build returned from call to OSCP. Unable to continue")
 	}
+
 	comp.WatchURL = client.BuildConfigLogURL(nameSpace, build.Name)
 	comp.BuildURL = client.BuildURL(nameSpace, build.Name, deploy.CloudAppGUID)
 	return comp, nil
@@ -247,14 +259,41 @@ func (c Controller) create(client Client, template *Template, nameSpace string, 
 	return complete, nil
 }
 
-func (c Controller) update(client Client, dc *dc.DeploymentConfig, template *Template, nameSpace string, deploy *Payload) (*Complete, error) {
+// update the existing deployconfig and buildconfig with the new deployment payload data
+func (c Controller) update(client Client, d *dc.DeploymentConfig, b *bc.BuildConfig, template *Template, nameSpace string, deploy *Payload) (*Complete, error) {
 	var (
 		complete = &Complete{}
 	)
-	// for _, c := range dc.Spec.Template.Spec.Containers{
-	// 	c.Env
-	// }
-	//update git details
-	// update env vars
-	return complete, errors.New("redeploy not implemented")
+
+	// 03/03/2017 pbrookes: Iterate over the objects in the template and update the ones we care about
+	for _, ob := range template.Objects {
+		switch ob.(type) {
+		// 03/03/2017 pbrookes: Update the deployconfig (for env var updates)
+		case *dc.DeploymentConfig:
+			// 03/03/2017 pbrookes: apply the resource version for the deployconfig
+			ob.(*dc.DeploymentConfig).SetResourceVersion(d.GetObjectMeta().GetResourceVersion())
+
+			// 03/03/2017 pbrookes: Send the updated deploy config to openshift
+			if _, err := client.UpdateDeployConfigInNamespace(nameSpace, ob.(*dc.DeploymentConfig)); err != nil {
+				return nil, errors.Wrap(err, "error updating deploy config: ")
+			}
+		// 03/03/2017 pbrookes: Update the buildconfig (for git repo and ref changes)
+		case *bc.BuildConfig:
+			// 03/03/2017 pbrookes: apply the resource version for the buildconfig
+			ob.(*bc.BuildConfig).SetResourceVersion(b.GetObjectMeta().GetResourceVersion())
+
+			// 03/03/2017 pbrookes: Send the updated build config to openshift
+			if _, err := client.UpdateBuildConfigInNamespace(nameSpace, ob.(*bc.BuildConfig)); err != nil {
+				return nil, errors.Wrap(err, "error updating build config: ")
+			}
+		// 05/03/2017 pbrookes: Update any routes for the app
+		case *route.Route:
+			r, err := client.UpdateRouteInNamespace(nameSpace, ob.(*route.Route))
+			if err != nil {
+				return nil, err
+			}
+			complete.Route = r
+		}
+	}
+	return complete, nil
 }

@@ -134,6 +134,15 @@ func (c Client) CreateBuildConfigInNamespace(ns string, b *bc.BuildConfig) (*bc.
 	return buildConfig, err
 }
 
+// UpdateBuildConfigInNamespace updates the supplied build config in the supplied namespace and returns the buildconfig, or any errors that occurred
+func (c Client) UpdateBuildConfigInNamespace(ns string, b *bc.BuildConfig) (*bc.BuildConfig, error) {
+	buildConfig, err := c.oc.BuildConfigs(ns).Update(b)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create BuildConfig")
+	}
+	return buildConfig, err
+}
+
 // InstantiateBuild will kick off a build in OSCP
 func (c Client) InstantiateBuild(ns, buildName string) (*bc.Build, error) {
 	//{"kind":"BuildRequest","apiVersion":"v1","metadata":{"name":"cloudapp"}}
@@ -179,6 +188,15 @@ func (c Client) CreateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route,
 	return route, err
 }
 
+// UpdateRouteInNamespace updates the supplied route in the supplied namespace and returns the route and any error
+func (c Client) UpdateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route, error) {
+	route, err := c.oc.Routes(ns).Update(r)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to update route")
+	}
+	return route, err
+}
+
 func (c Client) CreateImageStream(ns string, i *ioapi.ImageStream) (*ioapi.ImageStream, error) {
 	imageStream, err := c.oc.ImageStreams(ns).Create(i)
 	if err != nil {
@@ -193,6 +211,16 @@ func (c Client) CreateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create DeployConfig")
 	}
+	return deployConfig, err
+}
+
+// UpdateDeployConfigInNamespace updates the supplied deploy config in the supplied namespace and returns the deployconfig and any errors that occurred
+func (c Client) UpdateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig) (*dc.DeploymentConfig, error) {
+	deployConfig, err := c.oc.DeploymentConfigs(ns).Update(d)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to update DeployConfig")
+	}
+
 	return deployConfig, err
 }
 
@@ -212,6 +240,29 @@ func (c Client) FindDeploymentConfigByLabel(ns string, searchLabels map[string]s
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list deployconfig")
+	}
+	if nil == l || len(l.Items) == 0 {
+		return nil, nil
+	}
+	return &l.Items[0], nil
+}
+
+// FindBuildConfigByLabel searches for a build config by a label selector
+func (c Client) FindBuildConfigByLabel(ns string, searchLabels map[string]string) (*bc.BuildConfig, error) {
+	selector := labels.NewSelector()
+	for k, v := range searchLabels {
+		req, err := labels.NewRequirement(k, labels.DoubleEqualsOperator, sets.NewString(v))
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create requirement to find build config")
+		}
+
+		selector.Add(*req)
+	}
+	l, err := c.oc.BuildConfigs(ns).List(api.ListOptions{
+		LabelSelector: selector,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to list buildconfig")
 	}
 	if nil == l || len(l.Items) == 0 {
 		return nil, nil
