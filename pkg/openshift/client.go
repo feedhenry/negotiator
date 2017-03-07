@@ -3,7 +3,6 @@ package openshift
 import (
 	"fmt"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/feedhenry/negotiator/deploy"
 	bc "github.com/openshift/origin/pkg/build/api"
 	bcv1 "github.com/openshift/origin/pkg/build/api/v1"
@@ -46,6 +45,7 @@ func init() {
 	ioapi1.AddToScheme(api.Scheme)
 }
 
+// ClientFactory will create and return an openshift client
 type ClientFactory struct{}
 
 // DefaultDeployClient will return a sane default client configured for the given host and token
@@ -164,6 +164,7 @@ func (c Client) InstantiateBuild(ns, buildName string) (*bc.Build, error) {
 	return build, err
 }
 
+// CreateServiceInNamespace creates the specified service in the specified namespace
 func (c Client) CreateServiceInNamespace(ns string, svc *api.Service) (*api.Service, error) {
 	s, err := c.k8.Services(ns).Create(svc)
 	if err != nil {
@@ -172,6 +173,7 @@ func (c Client) CreateServiceInNamespace(ns string, svc *api.Service) (*api.Serv
 	return s, err
 }
 
+// CreateSecretInNamespace creates the specified secret in the specified namespace
 func (c Client) CreateSecretInNamespace(ns string, s *api.Secret) (*api.Secret, error) {
 	s, err := c.k8.Secrets(ns).Create(s)
 	if err != nil {
@@ -180,6 +182,7 @@ func (c Client) CreateSecretInNamespace(ns string, s *api.Secret) (*api.Secret, 
 	return s, err
 }
 
+// CreateRouteInNamespace creates the specified route in the specified namespace
 func (c Client) CreateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route, error) {
 	route, err := c.oc.Routes(ns).Create(r)
 	if err != nil {
@@ -197,6 +200,7 @@ func (c Client) UpdateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route,
 	return route, err
 }
 
+// CreateImageStream creates the specified imagestream in the specified namespace
 func (c Client) CreateImageStream(ns string, i *ioapi.ImageStream) (*ioapi.ImageStream, error) {
 	imageStream, err := c.oc.ImageStreams(ns).Create(i)
 	if err != nil {
@@ -227,9 +231,6 @@ func (c Client) UpdateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig)
 // FindDeploymentConfigByLabel searches for a deployment config by a label selector
 func (c Client) FindDeploymentConfigByLabel(ns string, searchLabels map[string]string) (*dc.DeploymentConfig, error) {
 	l, err := c.oc.DeploymentConfigs(ns).List(api.ListOptions{LabelSelector: labels.SelectorFromSet(searchLabels)})
-
-	logrus.Info("created dc selector: " + labels.SelectorFromSet(searchLabels).String())
-
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list deployconfig")
 	}
@@ -242,9 +243,6 @@ func (c Client) FindDeploymentConfigByLabel(ns string, searchLabels map[string]s
 // FindBuildConfigByLabel searches for a build config by a label selector
 func (c Client) FindBuildConfigByLabel(ns string, searchLabels map[string]string) (*bc.BuildConfig, error) {
 	l, err := c.oc.BuildConfigs(ns).List(api.ListOptions{LabelSelector: labels.SelectorFromSet(searchLabels)})
-
-	logrus.Info("created bc selector: " + labels.SelectorFromSet(searchLabels).String())
-
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list buildconfig")
 	}
@@ -254,14 +252,17 @@ func (c Client) FindBuildConfigByLabel(ns string, searchLabels map[string]string
 	return &l.Items[0], nil
 }
 
+// DeployLogURL returns the URL that can be polled for the deploy log of the specified dc in the specified namespace
 func (c Client) DeployLogURL(ns, dc string) string {
 	return fmt.Sprintf("%s/oapi/v1/namespaces/%s/deploymentconfigs/%s/log?follow=true", c.host, ns, dc)
 }
 
+// BuildConfigLogURL returns the URL that can be polled for the build log of the specified dc in the specified namespace
 func (c Client) BuildConfigLogURL(ns, bc string) string {
 	return fmt.Sprintf("%s/oapi/v1/namespaces/%s/builds/%s/log?follow=true", c.host, ns, bc)
 }
 
+// BuildURL returns the URL that can be polled for the build log of the specified build id for the specified dc in the specified namespace
 func (c Client) BuildURL(ns, bc, id string) string {
 	return fmt.Sprintf("%s/oapi/v1/namespaces/%s/builds?fieldSelector=metadata.name=%s&watch=true", c.host, ns, bc)
 }

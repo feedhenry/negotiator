@@ -16,8 +16,6 @@ import (
 	"github.com/pkg/errors"
 	k8api "k8s.io/kubernetes/pkg/api"
 
-	"fmt"
-
 	"github.com/feedhenry/negotiator/pkg/log"
 	roapi "github.com/openshift/origin/pkg/route/api"
 )
@@ -193,13 +191,11 @@ func (c Controller) Template(client Client, template, nameSpace string, deploy *
 	}
 
 	if nil == dc || nil == bc {
-		fmt.Println("creating cloud app")
 		comp, err = c.create(client, osTemplate, nameSpace, deploy)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		fmt.Println("updating cloud app")
 		comp, err = c.update(client, dc, bc, osTemplate, nameSpace, deploy)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error updating deploy: ")

@@ -50,6 +50,8 @@ type templateLoaderDecoder struct {
 	decoder      runtime.Decoder
 }
 
+// NewTemplateLoaderDecoder creates a template loader that loads templates from the supplied directory
+// Todo: Don't return an unexported type
 func NewTemplateLoaderDecoder(templateDir string) *templateLoaderDecoder {
 	return &templateLoaderDecoder{
 		templatesDir: templateDir,
@@ -66,7 +68,7 @@ func (tl *templateLoaderDecoder) Decode(data []byte) (*deploy.Template, error) {
 	tmpl, ok := obj.(*api.Template)
 	if !ok {
 		kind := reflect.Indirect(reflect.ValueOf(obj)).Type().Name()
-		return nil, errors.New(fmt.Sprintf("top level object must be of kind Template, found %s", kind))
+		return nil, fmt.Errorf("top level object must be of kind Template, found %s", kind)
 	}
 
 	return &deploy.Template{Template: tmpl}, tl.resolveObjects(tmpl)
