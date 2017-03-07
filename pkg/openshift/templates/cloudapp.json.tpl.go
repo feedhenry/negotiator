@@ -23,7 +23,8 @@ var CloudAppTemplate = `
                "rhmap/domain": "{{.Domain}}",
                "rhmap/env": "{{.Env}}",
                "rhmap/guid": "{{.CloudAppGUID}}",
-               "rhmap/project": "{{.ProjectGUID}}"
+               "rhmap/project": "{{.ProjectGUID}}",
+               "rhmap/title": "{{.ServiceName}}"
           },
           "annotations": {
               "description": "Keeps track of changes in the application image",
@@ -42,7 +43,8 @@ var CloudAppTemplate = `
           "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/guid": "{{.CloudAppGUID}}",
-          "rhmap/project": "{{.ProjectGUID}}"
+          "rhmap/project": "{{.ProjectGUID}}",
+          "rhmap/title": "{{.ServiceName}}"
         },
         "annotations": {
           "rhmap/description": "",
@@ -72,7 +74,8 @@ var CloudAppTemplate = `
           "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/guid": "{{.CloudAppGUID}}",
-          "rhmap/project": "{{.ProjectGUID}}"
+          "rhmap/project": "{{.ProjectGUID}}",
+          "rhmap/title": "{{.ServiceName}}"
         },
         "annotations": {
           "description": "Defines how to build the application",
@@ -137,7 +140,8 @@ var CloudAppTemplate = `
             "rhmap/domain": "{{.Domain}}",
             "rhmap/env": "{{.Env}}",
             "rhmap/guid": "{{.CloudAppGUID}}",
-            "rhmap/project": "{{.ProjectGUID}}"
+            "rhmap/project": "{{.ProjectGUID}}",
+            "rhmap/title": "{{.ServiceName}}"
           },
           "annotations" : {
             "rhmap/description" : "cloud app git secret",
@@ -165,7 +169,8 @@ var CloudAppTemplate = `
           "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/guid": "{{.CloudAppGUID}}",
-          "rhmap/project": "{{.ProjectGUID}}"
+          "rhmap/project": "{{.ProjectGUID}}",
+          "rhmap/title": "{{.ServiceName}}"
         },
         "annotations": {
           "description": "Exposes and load balances the application pods",
@@ -202,7 +207,8 @@ var CloudAppTemplate = `
           "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/guid": "{{.CloudAppGUID}}",
-          "rhmap/project": "{{.ProjectGUID}}"
+          "rhmap/project": "{{.ProjectGUID}}",
+          "rhmap/title": "{{.ServiceName}}"
         },
         "annotations": {
           "description": "Defines how to deploy the application server",
