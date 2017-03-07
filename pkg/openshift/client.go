@@ -3,6 +3,7 @@ package openshift
 import (
 	"fmt"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/feedhenry/negotiator/deploy"
 	bc "github.com/openshift/origin/pkg/build/api"
 	bcv1 "github.com/openshift/origin/pkg/build/api/v1"
@@ -25,7 +26,6 @@ import (
 	clientcmdapi "k8s.io/kubernetes/pkg/client/unversioned/clientcmd/api"
 	kubectlutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 	"k8s.io/kubernetes/pkg/labels"
-	"k8s.io/kubernetes/pkg/util/sets"
 )
 
 var (
@@ -226,18 +226,10 @@ func (c Client) UpdateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig)
 
 // FindDeploymentConfigByLabel searches for a deployment config by a label selector
 func (c Client) FindDeploymentConfigByLabel(ns string, searchLabels map[string]string) (*dc.DeploymentConfig, error) {
-	selector := labels.NewSelector()
-	for k, v := range searchLabels {
-		req, err := labels.NewRequirement(k, labels.EqualsOperator, sets.NewString(v))
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create requirement to find deployment config")
-		}
+	l, err := c.oc.DeploymentConfigs(ns).List(api.ListOptions{LabelSelector: labels.SelectorFromSet(searchLabels)})
 
-		selector.Add(*req)
-	}
-	l, err := c.oc.DeploymentConfigs(ns).List(api.ListOptions{
-		LabelSelector: selector,
-	})
+	logrus.Info("created dc selector: " + labels.SelectorFromSet(searchLabels).String())
+
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list deployconfig")
 	}
@@ -249,18 +241,10 @@ func (c Client) FindDeploymentConfigByLabel(ns string, searchLabels map[string]s
 
 // FindBuildConfigByLabel searches for a build config by a label selector
 func (c Client) FindBuildConfigByLabel(ns string, searchLabels map[string]string) (*bc.BuildConfig, error) {
-	selector := labels.NewSelector()
-	for k, v := range searchLabels {
-		req, err := labels.NewRequirement(k, labels.DoubleEqualsOperator, sets.NewString(v))
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create requirement to find build config")
-		}
+	l, err := c.oc.BuildConfigs(ns).List(api.ListOptions{LabelSelector: labels.SelectorFromSet(searchLabels)})
 
-		selector.Add(*req)
-	}
-	l, err := c.oc.BuildConfigs(ns).List(api.ListOptions{
-		LabelSelector: selector,
-	})
+	logrus.Info("created bc selector: " + labels.SelectorFromSet(searchLabels).String())
+
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list buildconfig")
 	}
