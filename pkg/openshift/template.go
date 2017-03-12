@@ -63,7 +63,8 @@ func (tl *templateLoaderDecoder) Decode(data []byte) (*deploy.Template, error) {
 	dec := tl.decoder
 	obj, _, err := dec.Decode(data, nil, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to decode template")
+		fmt.Println(string(data))
+		return nil, errors.Wrap(err, "failed to decode template ")
 	}
 	tmpl, ok := obj.(*api.Template)
 	if !ok {

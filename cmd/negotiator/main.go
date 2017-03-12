@@ -37,7 +37,10 @@ func main() {
 	// deploy setup
 	{
 		templates := pkgos.NewTemplateLoaderDecoder(conf.TemplateDir())
-		deployController := deploy.New(templates, templates, logger)
+		//not use a log publisher this would be replaced with something that published to redis
+		serviceConfigFactory := deploy.ConfigurationFactory{StatusPublisher: deploy.LogStatusPublisher{Logger: logger}}
+		deployController := deploy.New(templates, templates, logger, serviceConfigFactory)
+
 		web.DeployRoute(router, logger, deployController, clientFactory)
 	}
 	// system setup

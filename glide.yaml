@@ -1,4 +1,6 @@
 package: github.com/feedhenry/negotiator
+excludeDirs:
+- design
 import:
 - package: github.com/Sirupsen/logrus
   version: v0.11.0
@@ -34,5 +36,3 @@ import:
   version: ~0.8.0
 - package: github.com/rs/cors
   version: ~1.0.0
-excludeDirs:
-- design

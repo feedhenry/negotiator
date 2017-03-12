@@ -7,7 +7,7 @@ var CloudAppTemplate = `
   "kind": "Template",
   "apiVersion": "v1",
   "metadata": {
-    "name": "cloudApp",
+    "name": "cloudapp",
     "annotations": {
       "description": "cloudApp",
       "tags": "rhmap,cloudApp"
@@ -75,7 +75,9 @@ var CloudAppTemplate = `
           "rhmap/env": "{{.Env}}",
           "rhmap/guid": "{{.CloudAppGUID}}",
           "rhmap/project": "{{.ProjectGUID}}",
-          "rhmap/title": "{{.ServiceName}}"
+          "rhmap/title": "{{.ServiceName}}",
+          "rhmap/type": "cloudapp",
+          "rhmap/name": "cloudapp"
         },
         "annotations": {
           "description": "Defines how to build the application",
@@ -85,6 +87,9 @@ var CloudAppTemplate = `
       },
       "spec": {
         "triggers": [
+          {
+            "type": "ConfigChange"
+          },
           {
             "type": "ImageChange",
             "imageChange": {}
@@ -208,7 +213,9 @@ var CloudAppTemplate = `
           "rhmap/env": "{{.Env}}",
           "rhmap/guid": "{{.CloudAppGUID}}",
           "rhmap/project": "{{.ProjectGUID}}",
-          "rhmap/title": "{{.ServiceName}}"
+          "rhmap/title": "{{.ServiceName}}",
+          "rhmap/type": "cloudapp",
+          "rhmap/name": "cloudapp"
         },
         "annotations": {
           "description": "Defines how to deploy the application server",
@@ -229,6 +236,9 @@ var CloudAppTemplate = `
           "resources": {}
         },
         "triggers": [
+          {
+            "type": "ConfigChange"
+          },
           {
             "type": "ImageChange",
             "imageChangeParams": {
@@ -271,6 +281,10 @@ var CloudAppTemplate = `
                   }
                 ],
                 "env": [
+                   {
+                    "name":"FH_REDIS_HOST",
+                    "value":""
+                  },
                   {{$len := len .EnvVars}}
                   {{range $index,$envVar := .EnvVars}}
                   {

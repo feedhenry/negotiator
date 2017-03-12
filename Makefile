@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-VERSION := v0.0.1
+VERSION := v0.0.3
 NAME := negotiator
 
 .PHONY: all
@@ -44,7 +44,12 @@ test-with-vendor:
 	go test -v -cpu=2 ./...
 
 build:
-	go build -ldflags "-X main.Version=$(VERSION)"
+	cd cmd/negotiator && go build -ldflags "-X main.Version=$(VERSION)"
+	cd cmd/services && go build -ldflags "-X main.Version=$(VERSION)"
+
+build_linux:
+	cd cmd/negotiator && env GOOS=linux go build -ldflags "-X main.Version=$(VERSION)"
+	cd cmd/services && env GOOS=linux go build -ldflags "-X main.Version=$(VERSION)"
 
 deps:
 	go get github.com/c4milo/github-release

@@ -14,6 +14,18 @@ import (
 	"k8s.io/kubernetes/pkg/api"
 )
 
+type mockServiceConfigFactory struct{}
+
+func (msf mockServiceConfigFactory) Factory(service string) (deploy.Configurer, error) {
+	return mockConfigurer{}, nil
+}
+
+type mockConfigurer struct{}
+
+func (mc mockConfigurer) Configure(client deploy.Client, inprogress *deploy.Dispatched) error {
+	return nil
+}
+
 func TestDeploy(t *testing.T) {
 	cases := []struct {
 		TestName    string
@@ -135,9 +147,9 @@ func TestDeploy(t *testing.T) {
 		{
 			TestName: "test redeploy cloudapp",
 			Returns: map[string]interface{}{
-				"InstantiateBuild":            &bc.Build{ObjectMeta: api.ObjectMeta{Name: "test"}},
-				"FindBuildConfigByLabel":      &bc.BuildConfig{ObjectMeta: api.ObjectMeta{Name: "test"}},
-				"FindDeploymentConfigByLabel": &dcapi.DeploymentConfig{ObjectMeta: api.ObjectMeta{Name: "test"}},
+				"InstantiateBuild":             &bc.Build{ObjectMeta: api.ObjectMeta{Name: "test"}},
+				"FindBuildConfigByLabel":       &bc.BuildConfig{ObjectMeta: api.ObjectMeta{Name: "test"}},
+				"FindDeploymentConfigsByLabel": []dcapi.DeploymentConfig{{ObjectMeta: api.ObjectMeta{Name: "test"}}},
 			},
 			ExpectError: false,
 			Template:    "cloudapp",
@@ -179,7 +191,7 @@ func TestDeploy(t *testing.T) {
 				pc.Returns = tc.Returns
 			}
 			pc.Asserts = tc.Asserts
-			dc := deploy.New(tl, tl, logrus.StandardLogger())
+			dc := deploy.New(tl, tl, logrus.StandardLogger(), mockServiceConfigFactory{})
 			_, err := dc.Template(pc, tc.Template, tc.NameSpace, tc.Payload)
 			if !tc.ExpectError && err != nil {
 				fmt.Printf("%+v", err)
