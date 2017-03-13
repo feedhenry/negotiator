@@ -218,6 +218,15 @@ func (c Client) CreateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig)
 	return deployConfig, err
 }
 
+// GetDeploymentConfigByName returns the DeploymentConfig for the name passed
+func (c Client) GetDeploymentConfigByName(ns, deploymentName string) (*dc.DeploymentConfig, error) {
+	uptodate, err := c.oc.DeploymentConfigs(ns).Get(deploymentName)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get DeploymentConfig")
+	}
+	return uptodate, nil
+}
+
 // UpdateDeployConfigInNamespace updates the supplied deploy config in the supplied namespace and returns the deployconfig and any errors that occurred
 func (c Client) UpdateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig) (*dc.DeploymentConfig, error) {
 	var deployed *dc.DeploymentConfig

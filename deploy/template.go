@@ -44,6 +44,7 @@ type Client interface {
 	InstantiateBuild(ns, buildName string) (*bc.Build, error)
 	FindDeploymentConfigsByLabel(ns string, searchLabels map[string]string) ([]dc.DeploymentConfig, error)
 	FindBuildConfigByLabel(ns string, searchLabels map[string]string) (*bc.BuildConfig, error)
+	GetDeploymentConfigByName(ns, deploymentName string) (*dc.DeploymentConfig, error)
 	DeployLogURL(ns, dc string) string
 	BuildConfigLogURL(ns, dc string) string
 	BuildURL(ns, bc, id string) string
@@ -51,12 +52,10 @@ type Client interface {
 
 // Controller handle deploy templates to OSCP
 type Controller struct {
-	templateLoader       TemplateLoader
-	TemplateDecoder      TemplateDecoder
-	Logger               log.Logger
-	ConfigurationFactory ServiceConfigFactory
-	//DispatchedDeployments can be observed by interested parties that want to react to a DispatchedDeployment
-	DispatchedDeployments chan Dispatched
+	templateLoader          TemplateLoader
+	TemplateDecoder         TemplateDecoder
+	Logger                  log.Logger
+	ConfigurationController *EnvironmentServiceConfigController
 }
 
 // Payload represents a deployment payload
@@ -80,8 +79,8 @@ type Dispatched struct {
 	Route    *roapi.Route `json:"route"`
 	// BuildURL is the url used to get the status of a build
 	BuildURL string `json:"buildURL"`
-	// ConfigurationStatusURL is used to get details about post deployment configuration.
-	ConfigurationStatusURL string `json:"configurationStatusURL"`
+
+	DepoymentName string `json:"deploymentName"`
 }
 
 // Target is part of a Payload to deploy it is the target OSCP
@@ -175,16 +174,16 @@ func (p Payload) Validate(template string) error {
 
 type ServiceConfigFactory interface {
 	Factory(serviceName string) Configurer
+	Publisher(publisher StatusPublisher)
 }
 
 // New returns a new Controller
-func New(tl TemplateLoader, td TemplateDecoder, logger log.Logger, configurationFactory ServiceConfigFactory) *Controller {
+func New(tl TemplateLoader, td TemplateDecoder, logger log.Logger, configuration *EnvironmentServiceConfigController) *Controller {
 	return &Controller{
-		templateLoader:        tl,
-		TemplateDecoder:       td,
-		Logger:                logger,
-		ConfigurationFactory:  configurationFactory,
-		DispatchedDeployments: make(chan Dispatched, 5),
+		templateLoader:          tl,
+		TemplateDecoder:         td,
+		Logger:                  logger,
+		ConfigurationController: configuration,
 	}
 }
 
@@ -246,15 +245,14 @@ func (c Controller) Template(client Client, template, nameSpace string, deploy *
 		if err != nil {
 			return nil, errors.Wrap(err, "Error updating deploy: ")
 		}
-
+		c.ConfigurationController.Configure(client, dispatched.DepoymentName, nameSpace)
 		return instansiateBuild()
 	}
 	dispatched, err = c.create(client, osTemplate, nameSpace, deploy)
 	if err != nil {
 		return nil, err
 	}
-
-	// configure() if it is a cloudapp. configure it to use available environment services
+	c.ConfigurationController.Configure(client, dispatched.DepoymentName, nameSpace)
 	return instansiateBuild()
 
 }
@@ -267,16 +265,12 @@ func (c Controller) create(client Client, template *Template, nameSpace string, 
 	for _, ob := range template.Objects {
 		switch ob.(type) {
 		case *dc.DeploymentConfig:
-			configurer := c.ConfigurationFactory.Factory(template.GetName())
 			deployment := ob.(*dc.DeploymentConfig)
-			deployment, err := configurer.Configure(client, deployment, nameSpace)
+			deployed, err := client.CreateDeployConfigInNamespace(nameSpace, deployment)
 			if err != nil {
 				return nil, err
 			}
-			_, err = client.CreateDeployConfigInNamespace(nameSpace, deployment)
-			if err != nil {
-				return nil, err
-			}
+			dispatched.DepoymentName = deployed.GetName()
 		case *k8api.Service:
 			if _, err := client.CreateServiceInNamespace(nameSpace, ob.(*k8api.Service)); err != nil {
 				return nil, err
@@ -309,20 +303,17 @@ func (c Controller) create(client Client, template *Template, nameSpace string, 
 func (c Controller) update(client Client, d *dc.DeploymentConfig, b *bc.BuildConfig, template *Template, nameSpace string, deploy *Payload) (*Dispatched, error) {
 	var (
 		dispatched = &Dispatched{}
-		configurer = c.ConfigurationFactory.Factory(template.GetName())
 	)
 	for _, ob := range template.Objects {
 		switch ob.(type) {
 		case *dc.DeploymentConfig:
 			deployment := ob.(*dc.DeploymentConfig)
 			deployment.SetResourceVersion(d.GetResourceVersion())
-			deployment, err := configurer.Configure(client, deployment, nameSpace)
+			deployed, err := client.UpdateDeployConfigInNamespace(nameSpace, deployment)
 			if err != nil {
-				return nil, err
-			}
-			if _, err := client.UpdateDeployConfigInNamespace(nameSpace, deployment); err != nil {
 				return nil, errors.Wrap(err, "error updating deploy config: ")
 			}
+			dispatched.DepoymentName = deployed.GetName()
 		case *bc.BuildConfig:
 			ob.(*bc.BuildConfig).SetResourceVersion(b.GetResourceVersion())
 			if _, err := client.UpdateBuildConfigInNamespace(nameSpace, ob.(*bc.BuildConfig)); err != nil {

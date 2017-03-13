@@ -1,42 +1,39 @@
 package deploy
 
 import (
-	"fmt"
-
 	"time"
 
 	"github.com/pkg/errors"
+
+	"strings"
 
 	"github.com/feedhenry/negotiator/pkg/log"
 	dc "github.com/openshift/origin/pkg/deploy/api"
 )
 
+// LogStatusPublisher publishes the status to the log
 type LogStatusPublisher struct {
 	Logger log.Logger
 }
 
+// Publish is called to send something new to the log
 func (lsp LogStatusPublisher) Publish(confifJobID string, status ConfigurationStatus) error {
 	lsp.Logger.Info(confifJobID, status)
 	return nil
 }
 
+// ConfigurationFactory is responsible for finding the right implementation of the Configurer interface and returning it to all the configuration of the environment
 type ConfigurationFactory struct {
 	StatusPublisher StatusPublisher
 }
 
-var unconfigurableError = errors.New("cannot configure that service type")
-
-type ConfigurationObserver interface {
-	Observe(chan ConfigurationStatus)
+// Publisher allows us to set the StatusPublisher for the Configurers
+func (cf *ConfigurationFactory) Publisher(publisher StatusPublisher) {
+	cf.StatusPublisher = publisher
 }
 
-func (cf ConfigurationFactory) Factory(service string) Configurer {
-	if service == templateCloudApp {
-		return &CloudAppConfigure{
-			ConfigurationFactory: cf,
-			StatusPublisher:      cf.StatusPublisher,
-		}
-	}
+// Factory is called to get a new Configurer based on the service type
+func (cf *ConfigurationFactory) Factory(service string) Configurer {
 	if service == templateCache {
 		return &CacheConfigure{
 			StatusPublisher: cf.StatusPublisher,
@@ -45,92 +42,111 @@ func (cf ConfigurationFactory) Factory(service string) Configurer {
 	return nil
 }
 
+// ConfigurationStatus represent the current status of the configuration
 type ConfigurationStatus struct {
 	Status  string    `json:"status"`
 	Log     []string  `json:"log"`
 	Started time.Time `json:"-"`
 }
 
+// StatusPublisher defines what a status publisher should implement
 type StatusPublisher interface {
 	Publish(key string, status ConfigurationStatus) error
 }
 
+// Configurer defines what an environment Configurer should look like
 type Configurer interface {
 	Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error)
 }
 
-type CloudAppConfigure struct {
-	//Bizzare I know probably needs a rethink
-	ConfigurationFactory ConfigurationFactory
+// EnvironmentServiceConfigController controlls the configuration of environments and services
+type EnvironmentServiceConfigController struct {
+	ConfigurationFactory ServiceConfigFactory
 	StatusPublisher      StatusPublisher
+	logger               log.Logger
 }
 
-func (cac *CloudAppConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
+// NewEnvironmentServiceConfigController returns a new EnvironmentServiceConfigController
+func NewEnvironmentServiceConfigController(configFactory ServiceConfigFactory, log log.Logger, publisher StatusPublisher) *EnvironmentServiceConfigController {
+	if nil == publisher {
+		publisher = LogStatusPublisher{Logger: log}
+	}
+	return &EnvironmentServiceConfigController{
+		StatusPublisher:      publisher,
+		ConfigurationFactory: configFactory,
+		logger:               log,
+	}
+}
+
+// Configure is called to configure the DeploymentConfig of a service that is currently being deployed
+func (cac *EnvironmentServiceConfigController) Configure(client Client, deploymentName, namespace string) error {
 	//cloudapp deployment config should be in place at this point, but check
-	var configurationStatus = ConfigurationStatus{Started: time.Now(), Log: []string{"starting configuration"}, Status: "inProgress"}
-	cac.StatusPublisher.Publish(deployment.GetResourceVersion(), configurationStatus)
+	var configurationStatus = ConfigurationStatus{Started: time.Now(), Log: []string{"starting configuration for service " + deploymentName}, Status: "inProgress"}
+	key := namespace + "/" + deploymentName
+	cac.StatusPublisher.Publish(key, configurationStatus)
 	var statusUpdate = func(message, status string) {
 		configurationStatus.Status = status
 		configurationStatus.Log = append(configurationStatus.Log, message)
-		cac.StatusPublisher.Publish(deployment.GetResourceVersion(), configurationStatus)
+		cac.StatusPublisher.Publish(key, configurationStatus)
 	}
+	// ensure we have the latest DeploymentConfig
+	deployment, err := client.GetDeploymentConfigByName(namespace, deploymentName)
+	if err != nil {
+		statusUpdate("unexpected error retrieving DeploymentConfig"+err.Error(), "error")
+		return err
+	}
+	if deployment == nil {
+		statusUpdate("could not find DeploymentConfig for "+deploymentName, "error")
+		return errors.New("could not find DeploymentConfig for " + deploymentName)
+	}
+	//find the deployed services
 	services, err := client.FindDeploymentConfigsByLabel(namespace, map[string]string{"rhmap/type": "environmentService"})
 	if err != nil {
-		statusUpdate("failed to retrieve environment Service dcs during configuration of cloud app "+deployment.Name+" "+err.Error(), "error")
-		return nil, err
+		statusUpdate("failed to retrieve environment Service dcs during configuration of  "+deployment.Name+" "+err.Error(), "error")
+		return err
 	}
-	//configure the app for any services already deployed
+	errs := []string{}
+	//configure for any environment services already deployed
 	for _, s := range services {
 		serviceName := s.Labels["rhmap/name"]
 		c := cac.ConfigurationFactory.Factory(serviceName)
-		c.Configure(client, deployment, namespace)
+		if _, err := c.Configure(client, deployment, namespace); err != nil {
+			errs = append(errs, err.Error())
+		}
 	}
-	return deployment, nil
+	if _, err := client.UpdateDeployConfigInNamespace(namespace, deployment); err != nil {
+		return errors.Wrap(err, "failed to update deployment after configuring it ")
+	}
+	if len(errs) > 0 {
+		return errors.New("some services failed to configure: " + strings.Join(errs, " : "))
+	}
+	return nil
 }
 
+// CacheConfigure is a Configurer for the cache service
 type CacheConfigure struct {
 	StatusPublisher StatusPublisher
 }
 
-func (c *CacheConfigure) modifySingleDcForCloudApp(deployment *dc.DeploymentConfig, namespace string) {
-	env := deployment.Spec.Template.Spec.Containers[0].Env
-	for i, e := range env {
-		if e.Name == "FH_REDIS_HOST" && e.Value == "" {
-			deployment.Spec.Template.Spec.Containers[0].Env[i].Value = "cache" //hard coded for time being
-			break
-		}
-	}
-}
-
+// Configure configures the current DeploymentConfig with the need configuration to use cache
 func (c *CacheConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
-	var searCritera = map[string]string{}
 	var configurationStatus = ConfigurationStatus{Started: time.Now(), Log: []string{"starting configuration"}, Status: "inProgress"}
 	c.StatusPublisher.Publish(deployment.GetResourceVersion(), configurationStatus)
-
 	var statusUpdate = func(message, status string) {
 		configurationStatus.Status = status
 		configurationStatus.Log = append(configurationStatus.Log, message)
 		c.StatusPublisher.Publish(deployment.GetResourceVersion(), configurationStatus)
 	}
-
-	if availableEnvironmentServices.isEnvironmentService(deployment.Name) {
-		searCritera["rhmap/type"] = "cloudapp"
-		cloudApps, err := client.FindDeploymentConfigsByLabel(namespace, searCritera)
-		if err != nil {
-			statusUpdate("unable to configure environment missing deployment context", "error")
-			return nil, err
-		}
-		configurationStatus.Log = append(configurationStatus.Log, fmt.Sprintf("found %d apps to configure ", len(cloudApps)))
-		c.StatusPublisher.Publish(deployment.GetResourceVersion(), configurationStatus)
-		for i := range cloudApps {
-			d := cloudApps[i]
-			c.modifySingleDcForCloudApp(&d, namespace)
-			if _, err := client.UpdateDeployConfigInNamespace(namespace, &d); err != nil {
-				statusUpdate("unable to configure client app DeploymentConfig "+err.Error(), "error")
+	// likely needs to be broken out as it will be needed for all services
+	statusUpdate("updating containers env for deployment "+deployment.GetName(), "inProgress")
+	for ci := range deployment.Spec.Template.Spec.Containers {
+		env := deployment.Spec.Template.Spec.Containers[ci].Env
+		for ei, e := range env {
+			if e.Name == "FH_REDIS_HOST" && e.Value != "cache" {
+				deployment.Spec.Template.Spec.Containers[ci].Env[ei].Value = "cache" //hard coded for time being
+				break
 			}
 		}
-		return deployment, nil
 	}
-	c.modifySingleDcForCloudApp(deployment, namespace)
-	return nil, nil
+	return deployment, nil
 }
