@@ -29,17 +29,17 @@ vet:
 
 .PHONY: test
 test-unit:
-	go test -v --cover -cpu=2 `go list ./... | grep -v /vendor/`
+	go test -v --cover -cpu=2 `go list ./... | grep -v /vendor/ | grep -v /design`
 
 .PHONY: test-all
 test-all:
-	go test -cpu=2 -cover `go list ./... | grep -v /vendor/` -integration=true	
+	go test -cpu=2 -cover `go list ./... | grep -v /vendor/` -integration=true
 
 .PHONY: test-race
 test-race:
     go test -v -cpu=1,2,4 -short -race `go list ./... | grep -v /vendor/`
 
-.PHONY: test-with-vendor 
+.PHONY: test-with-vendor
 test-with-vendor:
 	go test -v -cpu=2 ./...
 

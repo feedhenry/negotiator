@@ -1,6 +1,7 @@
 package openshift
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/openshift/origin/pkg/template/api"
@@ -16,11 +17,12 @@ import (
 	kapi "k8s.io/kubernetes/pkg/api"
 )
 
-var packagedTemplates = map[string]string{}
+// PackagedTemplates map of locally stored templates
+var PackagedTemplates = map[string]string{}
 
 func init() {
-	packagedTemplates["cloudapp"] = templates.CloudAppTemplate
-	packagedTemplates["cache"] = templates.CacheTemplate
+	PackagedTemplates["cloudapp"] = templates.CloudAppTemplate
+	PackagedTemplates["cache"] = templates.CacheTemplate
 }
 
 func (tl *templateLoaderDecoder) Load(name string) (*template.Template, error) {
@@ -32,7 +34,7 @@ func (tl *templateLoaderDecoder) Load(name string) (*template.Template, error) {
 		},
 	})
 	//check our own packagedTemplates first
-	if localTemplate, ok := packagedTemplates[name]; ok {
+	if localTemplate, ok := PackagedTemplates[name]; ok {
 		return t.Parse(localTemplate)
 	}
 	//look on disk for a template
@@ -87,4 +89,27 @@ func (tl *templateLoaderDecoder) resolveObjects(tmpl *api.Template) error {
 		}
 	}
 	return nil
+}
+
+func (tl *templateLoaderDecoder) List() ([]*deploy.Template, error) {
+	var err error
+	var t *template.Template
+	var ts []*deploy.Template
+	for v := range PackagedTemplates {
+		t, err = tl.Load(v)
+		if err != nil {
+			break
+		}
+		var buf bytes.Buffer
+		if err := t.ExecuteTemplate(&buf, v, &deploy.Payload{}); err != nil {
+			break
+		}
+
+		decoded, err := tl.Decode(buf.Bytes())
+		if err != nil {
+			break
+		}
+		ts = append(ts, decoded)
+	}
+	return ts, err
 }

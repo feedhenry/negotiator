@@ -10,6 +10,7 @@ var CloudAppTemplate = `
     "name": "cloudApp",
     "annotations": {
       "description": "cloudApp",
+      "dependenices": "None",
       "tags": "rhmap,cloudApp"
     }
   },
@@ -91,6 +92,7 @@ var CloudAppTemplate = `
           }
         ],
         "runPolicy": "SerialLatestOnly",
+        {{if .Repo  }}
         "source": {
           "type": "Git",
           "git": {
@@ -104,6 +106,7 @@ var CloudAppTemplate = `
           }
           {{end}}
         },
+        {{end}}
         "strategy": {
           "type": "Source",
           "sourceStrategy": {
@@ -129,7 +132,7 @@ var CloudAppTemplate = `
         "resources": {},
         "postCommit": {}
       }
-    },{{if ne .Repo.Auth.AuthType  "" }}
+    },{{if .Repo  }}{{if ne .Repo.Auth.AuthType  "" }}
      {
         "apiVersion": "v1",
         "kind": "Secret",
@@ -158,7 +161,7 @@ var CloudAppTemplate = `
             "ssh-privatekey":"{{.Repo.Auth.Key}}" 
           {{end}}  
         }
-    },{{end}}
+    },{{end}}{{end}}
     {
       "kind": "Service",
       "apiVersion": "v1",

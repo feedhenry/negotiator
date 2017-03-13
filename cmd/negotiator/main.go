@@ -33,10 +33,9 @@ func main() {
 		logrus.SetLevel(logrus.ErrorLevel)
 	}
 	logger := logrus.StandardLogger()
-
+	templates := pkgos.NewTemplateLoaderDecoder(conf.TemplateDir())
 	// deploy setup
 	{
-		templates := pkgos.NewTemplateLoaderDecoder(conf.TemplateDir())
 		deployController := deploy.New(templates, templates, logger)
 		web.DeployRoute(router, logger, deployController, clientFactory)
 	}
@@ -47,6 +46,10 @@ func main() {
 	// metrics setup
 	{
 		web.Metrics(router)
+	}
+	// templates setup
+	{
+		web.Templates(router, templates)
 	}
 	//http handler
 	{
