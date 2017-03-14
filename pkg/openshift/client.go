@@ -218,18 +218,39 @@ func (c Client) CreateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig)
 	return deployConfig, err
 }
 
-// UpdateDeployConfigInNamespace updates the supplied deploy config in the supplied namespace and returns the deployconfig and any errors that occurred
-func (c Client) UpdateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig) (*dc.DeploymentConfig, error) {
-	deployConfig, err := c.oc.DeploymentConfigs(ns).Update(d)
+// GetDeploymentConfigByName returns the DeploymentConfig for the name passed
+func (c Client) GetDeploymentConfigByName(ns, deploymentName string) (*dc.DeploymentConfig, error) {
+	uptodate, err := c.oc.DeploymentConfigs(ns).Get(deploymentName)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to update DeployConfig")
+		return nil, errors.Wrap(err, "failed to get DeploymentConfig")
 	}
-
-	return deployConfig, err
+	return uptodate, nil
 }
 
-// FindDeploymentConfigByLabel searches for a deployment config by a label selector
-func (c Client) FindDeploymentConfigByLabel(ns string, searchLabels map[string]string) (*dc.DeploymentConfig, error) {
+// UpdateDeployConfigInNamespace updates the supplied deploy config in the supplied namespace and returns the deployconfig and any errors that occurred
+func (c Client) UpdateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig) (*dc.DeploymentConfig, error) {
+	var deployed *dc.DeploymentConfig
+	err := k8client.RetryOnConflict(k8client.DefaultRetry, func() error {
+		fmt.Println("retrying update")
+		uptodate, err := c.oc.DeploymentConfigs(ns).Get(d.Name)
+		if err != nil {
+			return err
+		}
+		d.SetResourceVersion(uptodate.GetResourceVersion())
+		deployed, err = c.oc.DeploymentConfigs(ns).Update(d)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed update UpdateDeployConfigInNamespace")
+	}
+	return deployed, nil
+}
+
+// FindDeploymentConfigsByLabel searches for a deployment config by a label selector
+func (c Client) FindDeploymentConfigsByLabel(ns string, searchLabels map[string]string) ([]dc.DeploymentConfig, error) {
 	l, err := c.oc.DeploymentConfigs(ns).List(api.ListOptions{LabelSelector: labels.SelectorFromSet(searchLabels)})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to list deployconfig")
@@ -237,7 +258,7 @@ func (c Client) FindDeploymentConfigByLabel(ns string, searchLabels map[string]s
 	if nil == l || len(l.Items) == 0 {
 		return nil, nil
 	}
-	return &l.Items[0], nil
+	return l.Items, nil
 }
 
 // FindBuildConfigByLabel searches for a build config by a label selector

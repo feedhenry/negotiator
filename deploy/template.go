@@ -42,8 +42,9 @@ type Client interface {
 	UpdateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig) (*dc.DeploymentConfig, error)
 	UpdateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route, error)
 	InstantiateBuild(ns, buildName string) (*bc.Build, error)
-	FindDeploymentConfigByLabel(ns string, searchLabels map[string]string) (*dc.DeploymentConfig, error)
+	FindDeploymentConfigsByLabel(ns string, searchLabels map[string]string) ([]dc.DeploymentConfig, error)
 	FindBuildConfigByLabel(ns string, searchLabels map[string]string) (*bc.BuildConfig, error)
+	GetDeploymentConfigByName(ns, deploymentName string) (*dc.DeploymentConfig, error)
 	DeployLogURL(ns, dc string) string
 	BuildConfigLogURL(ns, dc string) string
 	BuildURL(ns, bc, id string) string
@@ -51,9 +52,10 @@ type Client interface {
 
 // Controller handle deploy templates to OSCP
 type Controller struct {
-	templateLoader  TemplateLoader
-	TemplateDecoder TemplateDecoder
-	Logger          log.Logger
+	templateLoader          TemplateLoader
+	TemplateDecoder         TemplateDecoder
+	Logger                  log.Logger
+	ConfigurationController *EnvironmentServiceConfigController
 }
 
 // Payload represents a deployment payload
@@ -70,11 +72,15 @@ type Payload struct {
 	Target       *Target   `json:"target"`
 }
 
-// Complete represents what is returned when a deploy completes sucessfully
-type Complete struct {
+// Dispatched represents what is returned when a deploy dispatches sucessfully
+type Dispatched struct {
+	// WatchURL is the url used to watch and stream the logs of a deployment or build
 	WatchURL string       `json:"watchURL"`
 	Route    *roapi.Route `json:"route"`
-	BuildURL string       `json:"buildURL"`
+	// BuildURL is the url used to get the status of a build
+	BuildURL string `json:"buildURL"`
+
+	DeploymentName string `json:"deploymentName"`
 }
 
 // Target is part of a Payload to deploy it is the target OSCP
@@ -126,6 +132,19 @@ func (t Template) hasSecret() bool {
 const templateCloudApp = "cloudapp"
 const templateCache = "cache"
 
+type environmentServices []string
+
+func (es environmentServices) isEnvironmentService(name string) bool {
+	for _, k := range es {
+		if k == name {
+			return true
+		}
+	}
+	return false
+}
+
+var availableEnvironmentServices = environmentServices{templateCache}
+
 // ErrInvalid is returned when something invalid happens
 type ErrInvalid struct {
 	message string
@@ -143,27 +162,57 @@ func (p Payload) Validate(template string) error {
 			return ErrInvalid{message: "a repo is expected for a cloudapp"}
 		}
 	}
+	if p.Target == nil {
+		return ErrInvalid{message: "an oscp target is required"}
+	}
 	if p.ServiceName == "" {
 		return ErrInvalid{message: "a serviceName is required"}
 	}
+
 	return nil
 }
 
+type ServiceConfigFactory interface {
+	Factory(serviceName string) Configurer
+	Publisher(publisher StatusPublisher)
+}
+
 // New returns a new Controller
-func New(tl TemplateLoader, td TemplateDecoder, logger log.Logger) *Controller {
+func New(tl TemplateLoader, td TemplateDecoder, logger log.Logger, configuration *EnvironmentServiceConfigController) *Controller {
 	return &Controller{
-		templateLoader:  tl,
-		TemplateDecoder: td,
-		Logger:          logger,
+		templateLoader:          tl,
+		TemplateDecoder:         td,
+		Logger:                  logger,
+		ConfigurationController: configuration,
 	}
 }
 
 // Template deploys a set of objects based on a template. Templates are located in resources/templates
-func (c Controller) Template(client Client, template, nameSpace string, deploy *Payload) (*Complete, error) {
+func (c Controller) Template(client Client, template, nameSpace string, deploy *Payload) (*Dispatched, error) {
 	var (
-		buf  bytes.Buffer
-		comp *Complete
+		buf        bytes.Buffer
+		dispatched *Dispatched
 	)
+	// wrap up the logic for instansiating a build or not
+	instansiateBuild := func() (*Dispatched, error) {
+
+		if template != templateCloudApp {
+			dispatched.WatchURL = client.DeployLogURL(nameSpace, deploy.ServiceName)
+			return dispatched, nil
+		}
+
+		build, err := client.InstantiateBuild(nameSpace, deploy.ServiceName)
+		if err != nil {
+			return nil, err
+		}
+		if build == nil {
+			return nil, errors.New("no build returned from call to OSCP. Unable to continue")
+		}
+		dispatched.WatchURL = client.BuildConfigLogURL(nameSpace, build.Name)
+		dispatched.BuildURL = client.BuildURL(nameSpace, build.Name, deploy.CloudAppGUID)
+		return dispatched, nil
+	}
+
 	if nameSpace == "" {
 		return nil, errors.New("an empty namespace cannot be provided")
 	}
@@ -181,56 +230,47 @@ func (c Controller) Template(client Client, template, nameSpace string, deploy *
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode into a os template: ")
 	}
-	dc, err := client.FindDeploymentConfigByLabel(nameSpace, map[string]string{"rhmap/guid": deploy.CloudAppGUID})
+	searchCrit := map[string]string{"rhmap/guid": deploy.CloudAppGUID}
+	dcs, err := client.FindDeploymentConfigsByLabel(nameSpace, searchCrit)
 	if err != nil {
 		return nil, errors.Wrap(err, "error trying to find deployment config: ")
 	}
-	bc, err := client.FindBuildConfigByLabel(nameSpace, map[string]string{"rhmap/guid": deploy.CloudAppGUID})
+	bc, err := client.FindBuildConfigByLabel(nameSpace, searchCrit)
 	if err != nil {
 		return nil, errors.Wrap(err, "error trying to find build config: ")
 	}
-
-	if nil == dc || nil == bc {
-		comp, err = c.create(client, osTemplate, nameSpace, deploy)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		comp, err = c.update(client, dc, bc, osTemplate, nameSpace, deploy)
+	//check if already deployed
+	if len(dcs) > 0 || nil != bc {
+		dispatched, err = c.update(client, &dcs[0], bc, osTemplate, nameSpace, deploy)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error updating deploy: ")
 		}
+		c.ConfigurationController.Configure(client, dispatched.DeploymentName, nameSpace)
+		return instansiateBuild()
 	}
-	//we only need to instantiate a build if it is cloud app
-	if template != templateCloudApp {
-		comp.WatchURL = client.DeployLogURL(nameSpace, deploy.ServiceName)
-		return comp, nil
-	}
-
-	build, err := client.InstantiateBuild(nameSpace, deploy.ServiceName)
+	dispatched, err = c.create(client, osTemplate, nameSpace, deploy)
 	if err != nil {
 		return nil, err
 	}
-	if build == nil {
-		return nil, errors.New("no build returned from call to OSCP. Unable to continue")
-	}
+	c.ConfigurationController.Configure(client, dispatched.DeploymentName, nameSpace)
+	return instansiateBuild()
 
-	comp.WatchURL = client.BuildConfigLogURL(nameSpace, build.Name)
-	comp.BuildURL = client.BuildURL(nameSpace, build.Name, deploy.CloudAppGUID)
-	return comp, nil
 }
 
-func (c Controller) create(client Client, template *Template, nameSpace string, deploy *Payload) (*Complete, error) {
+// create is responsible for creating the different Objects in a template via the OSCP and kubernetes API. this is used for new deployments
+func (c Controller) create(client Client, template *Template, nameSpace string, deploy *Payload) (*Dispatched, error) {
 	var (
-		complete = &Complete{}
+		dispatched = &Dispatched{}
 	)
 	for _, ob := range template.Objects {
 		switch ob.(type) {
 		case *dc.DeploymentConfig:
-			_, err := client.CreateDeployConfigInNamespace(nameSpace, ob.(*dc.DeploymentConfig))
+			deployment := ob.(*dc.DeploymentConfig)
+			deployed, err := client.CreateDeployConfigInNamespace(nameSpace, deployment)
 			if err != nil {
 				return nil, err
 			}
+			dispatched.DeploymentName = deployed.GetName()
 		case *k8api.Service:
 			if _, err := client.CreateServiceInNamespace(nameSpace, ob.(*k8api.Service)); err != nil {
 				return nil, err
@@ -240,7 +280,7 @@ func (c Controller) create(client Client, template *Template, nameSpace string, 
 			if err != nil {
 				return nil, err
 			}
-			complete.Route = r
+			dispatched.Route = r
 		case *image.ImageStream:
 			if _, err := client.CreateImageStream(nameSpace, ob.(*image.ImageStream)); err != nil {
 				return nil, err
@@ -256,44 +296,36 @@ func (c Controller) create(client Client, template *Template, nameSpace string, 
 			}
 		}
 	}
-	return complete, nil
+	return dispatched, nil
 }
 
-// update the existing deployconfig and buildconfig with the new deployment payload data
-func (c Controller) update(client Client, d *dc.DeploymentConfig, b *bc.BuildConfig, template *Template, nameSpace string, deploy *Payload) (*Complete, error) {
+// update the existing deployconfig and buildconfig with the new deployment payload data. Update the deployconfig (for env var updates),Update the buildconfig (for git repo and ref changes), Update any routes for the app
+func (c Controller) update(client Client, d *dc.DeploymentConfig, b *bc.BuildConfig, template *Template, nameSpace string, deploy *Payload) (*Dispatched, error) {
 	var (
-		complete = &Complete{}
+		dispatched = &Dispatched{}
 	)
-
-	// 03/03/2017 pbrookes: Iterate over the objects in the template and update the ones we care about
 	for _, ob := range template.Objects {
 		switch ob.(type) {
-		// 03/03/2017 pbrookes: Update the deployconfig (for env var updates)
 		case *dc.DeploymentConfig:
-			// 03/03/2017 pbrookes: apply the resource version for the deployconfig
-			ob.(*dc.DeploymentConfig).SetResourceVersion(d.GetObjectMeta().GetResourceVersion())
-
-			// 03/03/2017 pbrookes: Send the updated deploy config to openshift
-			if _, err := client.UpdateDeployConfigInNamespace(nameSpace, ob.(*dc.DeploymentConfig)); err != nil {
+			deployment := ob.(*dc.DeploymentConfig)
+			deployment.SetResourceVersion(d.GetResourceVersion())
+			deployed, err := client.UpdateDeployConfigInNamespace(nameSpace, deployment)
+			if err != nil {
 				return nil, errors.Wrap(err, "error updating deploy config: ")
 			}
-		// 03/03/2017 pbrookes: Update the buildconfig (for git repo and ref changes)
+			dispatched.DeploymentName = deployed.GetName()
 		case *bc.BuildConfig:
-			// 03/03/2017 pbrookes: apply the resource version for the buildconfig
-			ob.(*bc.BuildConfig).SetResourceVersion(b.GetObjectMeta().GetResourceVersion())
-
-			// 03/03/2017 pbrookes: Send the updated build config to openshift
+			ob.(*bc.BuildConfig).SetResourceVersion(b.GetResourceVersion())
 			if _, err := client.UpdateBuildConfigInNamespace(nameSpace, ob.(*bc.BuildConfig)); err != nil {
 				return nil, errors.Wrap(err, "error updating build config: ")
 			}
-		// 05/03/2017 pbrookes: Update any routes for the app
 		case *route.Route:
 			r, err := client.UpdateRouteInNamespace(nameSpace, ob.(*route.Route))
 			if err != nil {
 				return nil, err
 			}
-			complete.Route = r
+			dispatched.Route = r
 		}
 	}
-	return complete, nil
+	return dispatched, nil
 }

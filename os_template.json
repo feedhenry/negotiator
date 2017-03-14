@@ -106,7 +106,7 @@
                 "spec": {
                     "containers": [{
                         "name": "negotiator",
-                        "image": "rhmap/negotiator:0.0.3",
+                        "image": "rhmap/negotiator:0.0.4",
                         "env": [],
                         "resources": {},
                         "terminationMessagePath": "/dev/termination-log",

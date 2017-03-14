@@ -14,6 +14,21 @@ import (
 	"k8s.io/kubernetes/pkg/api"
 )
 
+type mockServiceConfigFactory struct{}
+
+func (msf mockServiceConfigFactory) Factory(service string) deploy.Configurer {
+	return mockConfigurer{}
+}
+func (msf *mockServiceConfigFactory) Publisher(pub deploy.StatusPublisher) {
+
+}
+
+type mockConfigurer struct{}
+
+func (mc mockConfigurer) Configure(client deploy.Client, inprogress *dcapi.DeploymentConfig, ns string) (*dcapi.DeploymentConfig, error) {
+	return inprogress, nil
+}
+
 func TestDeploy(t *testing.T) {
 	cases := []struct {
 		TestName    string
@@ -57,6 +72,10 @@ func TestDeploy(t *testing.T) {
 			Template:  "cache",
 			NameSpace: "test",
 			Payload: &deploy.Payload{
+				Target: &deploy.Target{
+					Host:  "http://test.com",
+					Token: "test",
+				},
 				ServiceName:  "cacheservice",
 				Domain:       "rhmap",
 				ProjectGUID:  "guid",
@@ -78,6 +97,10 @@ func TestDeploy(t *testing.T) {
 			Template:    "cloudapp",
 			NameSpace:   "test",
 			Payload: &deploy.Payload{
+				Target: &deploy.Target{
+					Host:  "http://test.com",
+					Token: "test",
+				},
 				ServiceName:  "cacheservice",
 				Domain:       "rhmap",
 				ProjectGUID:  "guid",
@@ -135,14 +158,18 @@ func TestDeploy(t *testing.T) {
 		{
 			TestName: "test redeploy cloudapp",
 			Returns: map[string]interface{}{
-				"InstantiateBuild":            &bc.Build{ObjectMeta: api.ObjectMeta{Name: "test"}},
-				"FindBuildConfigByLabel":      &bc.BuildConfig{ObjectMeta: api.ObjectMeta{Name: "test"}},
-				"FindDeploymentConfigByLabel": &dcapi.DeploymentConfig{ObjectMeta: api.ObjectMeta{Name: "test"}},
+				"InstantiateBuild":             &bc.Build{ObjectMeta: api.ObjectMeta{Name: "test"}},
+				"FindBuildConfigByLabel":       &bc.BuildConfig{ObjectMeta: api.ObjectMeta{Name: "test"}},
+				"FindDeploymentConfigsByLabel": []dcapi.DeploymentConfig{{ObjectMeta: api.ObjectMeta{Name: "test"}}},
 			},
 			ExpectError: false,
 			Template:    "cloudapp",
 			NameSpace:   "test",
 			Payload: &deploy.Payload{
+				Target: &deploy.Target{
+					Host:  "http://test.com",
+					Token: "test",
+				},
 				ServiceName:  "cacheservice",
 				Domain:       "rhmap",
 				ProjectGUID:  "guid",
@@ -179,7 +206,8 @@ func TestDeploy(t *testing.T) {
 				pc.Returns = tc.Returns
 			}
 			pc.Asserts = tc.Asserts
-			dc := deploy.New(tl, tl, logrus.StandardLogger())
+			sc := deploy.NewEnvironmentServiceConfigController(&mockServiceConfigFactory{}, logrus.StandardLogger(), nil)
+			dc := deploy.New(tl, tl, logrus.StandardLogger(), sc)
 			_, err := dc.Template(pc, tc.Template, tc.NameSpace, tc.Payload)
 			if !tc.ExpectError && err != nil {
 				fmt.Printf("%+v", err)

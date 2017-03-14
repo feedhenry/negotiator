@@ -28,7 +28,9 @@ func setUpDeployHandler() http.Handler {
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 	logger := logrus.StandardLogger()
 	templates := openshift.NewTemplateLoaderDecoder("")
-	deployController := deploy.New(templates, templates, logger)
+	serviceConfigFactory := &deploy.ConfigurationFactory{StatusPublisher: deploy.LogStatusPublisher{Logger: logger}}
+	serviceConfigController := deploy.NewEnvironmentServiceConfigController(serviceConfigFactory, logger, nil)
+	deployController := deploy.New(templates, templates, logger, serviceConfigController)
 	web.DeployRoute(router, logger, deployController, clientFactory)
 	return web.BuildHTTPHandler(router)
 }

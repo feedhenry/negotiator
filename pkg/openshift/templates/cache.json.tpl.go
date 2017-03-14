@@ -7,7 +7,7 @@ var CacheTemplate = `
     "kind": "Template",
     "apiVersion": "v1",
     "metadata": {
-        "name": "redis",
+        "name": "cache",
         "annotations": {
             "description": "Redis",
             "tags": "rhmap,redis"
@@ -52,7 +52,9 @@ var CacheTemplate = `
                     "rhmap/domain": "{{.Domain}}",
                     "rhmap/env": "{{.Env}}",
                     "rhmap/guid": "{{.CloudAppGUID}}",
-                    "rhmap/project": "{{.ProjectGUID}}"
+                    "rhmap/project": "{{.ProjectGUID}}",
+                    "rhmap/name": "cache",
+                    "rhmap/type":"environmentService"
                 },
                 "annotations": {
                     "description": "Defines how to deploy the redis caching layer"
