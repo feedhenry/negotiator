@@ -237,9 +237,6 @@ var CloudAppTemplate = `
         },
         "triggers": [
           {
-            "type": "ConfigChange"
-          },
-          {
             "type": "ImageChange",
             "imageChangeParams": {
               "automatic": true,

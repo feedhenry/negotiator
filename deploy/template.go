@@ -80,7 +80,7 @@ type Dispatched struct {
 	// BuildURL is the url used to get the status of a build
 	BuildURL string `json:"buildURL"`
 
-	DepoymentName string `json:"deploymentName"`
+	DeploymentName string `json:"deploymentName"`
 }
 
 // Target is part of a Payload to deploy it is the target OSCP
@@ -245,14 +245,14 @@ func (c Controller) Template(client Client, template, nameSpace string, deploy *
 		if err != nil {
 			return nil, errors.Wrap(err, "Error updating deploy: ")
 		}
-		c.ConfigurationController.Configure(client, dispatched.DepoymentName, nameSpace)
+		c.ConfigurationController.Configure(client, dispatched.DeploymentName, nameSpace)
 		return instansiateBuild()
 	}
 	dispatched, err = c.create(client, osTemplate, nameSpace, deploy)
 	if err != nil {
 		return nil, err
 	}
-	c.ConfigurationController.Configure(client, dispatched.DepoymentName, nameSpace)
+	c.ConfigurationController.Configure(client, dispatched.DeploymentName, nameSpace)
 	return instansiateBuild()
 
 }
@@ -270,7 +270,7 @@ func (c Controller) create(client Client, template *Template, nameSpace string, 
 			if err != nil {
 				return nil, err
 			}
-			dispatched.DepoymentName = deployed.GetName()
+			dispatched.DeploymentName = deployed.GetName()
 		case *k8api.Service:
 			if _, err := client.CreateServiceInNamespace(nameSpace, ob.(*k8api.Service)); err != nil {
 				return nil, err
@@ -313,7 +313,7 @@ func (c Controller) update(client Client, d *dc.DeploymentConfig, b *bc.BuildCon
 			if err != nil {
 				return nil, errors.Wrap(err, "error updating deploy config: ")
 			}
-			dispatched.DepoymentName = deployed.GetName()
+			dispatched.DeploymentName = deployed.GetName()
 		case *bc.BuildConfig:
 			ob.(*bc.BuildConfig).SetResourceVersion(b.GetResourceVersion())
 			if _, err := client.UpdateBuildConfigInNamespace(nameSpace, ob.(*bc.BuildConfig)); err != nil {
