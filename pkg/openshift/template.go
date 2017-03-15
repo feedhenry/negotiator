@@ -24,9 +24,9 @@ var PackagedTemplates = map[string]string{}
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 func init() {
-	packagedTemplates["cloudapp"] = templates.CloudAppTemplate
-	packagedTemplates["cache"] = templates.CacheTemplate
-	packagedTemplates["data"] = templates.DataTemplate
+	PackagedTemplates["cloudapp"] = templates.CloudAppTemplate
+	PackagedTemplates["cache"] = templates.CacheTemplate
+	PackagedTemplates["data"] = templates.DataTemplate
 }
 
 func (tl *templateLoaderDecoder) Load(name string) (*template.Template, error) {
