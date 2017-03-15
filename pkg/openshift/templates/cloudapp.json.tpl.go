@@ -10,6 +10,7 @@ var CloudAppTemplate = `
     "name": "cloudapp",
     "annotations": {
       "description": "cloudApp",
+      "dependenices": "None",
       "tags": "rhmap,cloudApp"
     }
   },
@@ -96,6 +97,7 @@ var CloudAppTemplate = `
           }
         ],
         "runPolicy": "SerialLatestOnly",
+        {{if .Repo  }}
         "source": {
           "type": "Git",
           "git": {
@@ -109,6 +111,7 @@ var CloudAppTemplate = `
           }
           {{end}}
         },
+        {{end}}
         "strategy": {
           "type": "Source",
           "sourceStrategy": {
@@ -134,7 +137,7 @@ var CloudAppTemplate = `
         "resources": {},
         "postCommit": {}
       }
-    },{{if ne .Repo.Auth.AuthType  "" }}
+    },{{if .Repo  }}{{if ne .Repo.Auth.AuthType  "" }}
      {
         "apiVersion": "v1",
         "kind": "Secret",
@@ -163,7 +166,7 @@ var CloudAppTemplate = `
             "ssh-privatekey":"{{.Repo.Auth.Key}}" 
           {{end}}  
         }
-    },{{end}}
+    },{{end}}{{end}}
     {
       "kind": "Service",
       "apiVersion": "v1",
@@ -278,20 +281,17 @@ var CloudAppTemplate = `
                   }
                 ],
                 "env": [
-                   {
-                    "name":"FH_REDIS_HOST",
-                    "value":""
-                  },
                   {{$len := len .EnvVars}}
                   {{range $index,$envVar := .EnvVars}}
                   {
                     "name": "{{$envVar.Name}}",
                     "value": "{{$envVar.Value}}"
-                  }
-                    {{if not (isEnd $index $len)}}
-                  ,
-                    {{end}}
+                  },
                   {{end}}
+                   {
+                    "name":"FH_REDIS_HOST",
+                    "value":""
+                  }
                 ],
                 "resources": {
                   "limits": {

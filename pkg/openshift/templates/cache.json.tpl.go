@@ -7,9 +7,10 @@ var CacheTemplate = `
     "kind": "Template",
     "apiVersion": "v1",
     "metadata": {
-        "name": "cache",
+        "name": "Redis",
         "annotations": {
-            "description": "Redis",
+            "description": "Redis is an in-memory data structure store, used as a database, cache and message broker",
+            "dependenices": "None",
             "tags": "rhmap,redis"
         }
     },

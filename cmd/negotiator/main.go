@@ -33,10 +33,9 @@ func main() {
 		logrus.SetLevel(logrus.ErrorLevel)
 	}
 	logger := logrus.StandardLogger()
-
+	templates := pkgos.NewTemplateLoaderDecoder(conf.TemplateDir())
 	// deploy setup
 	{
-		templates := pkgos.NewTemplateLoaderDecoder(conf.TemplateDir())
 		//not use a log publisher this would be replaced with something that published to redis
 		serviceConfigFactory := &deploy.ConfigurationFactory{StatusPublisher: deploy.LogStatusPublisher{Logger: logger}}
 		serviceConfigController := deploy.NewEnvironmentServiceConfigController(serviceConfigFactory, logger, nil)
@@ -50,6 +49,10 @@ func main() {
 	// metrics setup
 	{
 		web.Metrics(router)
+	}
+	// templates setup
+	{
+		web.Templates(router, templates)
 	}
 	//http handler
 	{

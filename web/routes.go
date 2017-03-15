@@ -56,3 +56,9 @@ func SysRoute(r *mux.Router) {
 func Metrics(r *mux.Router) {
 	r.Handle("/metrics", prometheus.Handler()).Methods("GET")
 }
+
+// Templates sets up the template route handler for the web interface
+func Templates(r *mux.Router, templateLoader deploy.TemplateLoader) {
+	templateHandler := NewTemplateHandler(templateLoader)
+	r.Handle("/service/templates", prometheus.InstrumentHandlerFunc("getTemplates", templateHandler.List)).Methods("GET")
+}

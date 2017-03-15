@@ -23,6 +23,7 @@ import (
 // TemplateLoader defines how deploy wants to load templates in order to be able to deploy them.
 type TemplateLoader interface {
 	Load(name string) (*template.Template, error)
+	List() ([]*Template, error)
 }
 
 // TemplateDecoder defines how deploy wants to decode the templates into data structures
