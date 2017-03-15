@@ -281,20 +281,17 @@ var CloudAppTemplate = `
                   }
                 ],
                 "env": [
-                   {
-                    "name":"FH_REDIS_HOST",
-                    "value":""
-                  },
                   {{$len := len .EnvVars}}
                   {{range $index,$envVar := .EnvVars}}
                   {
                     "name": "{{$envVar.Name}}",
                     "value": "{{$envVar.Value}}"
-                  }
-                    {{if not (isEnd $index $len)}}
-                  ,
-                    {{end}}
+                  },
                   {{end}}
+                   {
+                    "name":"FH_REDIS_HOST",
+                    "value":""
+                  }
                 ],
                 "resources": {
                   "limits": {

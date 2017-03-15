@@ -102,11 +102,11 @@ func (tl *templateLoaderDecoder) List() ([]*deploy.Template, error) {
 			break
 		}
 		var buf bytes.Buffer
-		if err := t.ExecuteTemplate(&buf, v, &deploy.Payload{}); err != nil {
+		if err = t.ExecuteTemplate(&buf, v, &deploy.Payload{}); err != nil {
 			break
 		}
-
-		decoded, err := tl.Decode(buf.Bytes())
+		var decoded *deploy.Template
+		decoded, err = tl.Decode(buf.Bytes())
 		if err != nil {
 			break
 		}
