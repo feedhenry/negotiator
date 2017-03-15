@@ -78,7 +78,7 @@ var CloudAppTemplate = `
           "rhmap/project": "{{.ProjectGUID}}",
           "rhmap/title": "{{.ServiceName}}",
           "rhmap/type": "cloudapp",
-          "rhmap/name": "cloudapp"
+          "rhmap/name": "{{.ServiceName}}"
         },
         "annotations": {
           "description": "Defines how to build the application",

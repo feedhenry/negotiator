@@ -227,6 +227,16 @@ func (c Client) GetDeploymentConfigByName(ns, deploymentName string) (*dc.Deploy
 	return uptodate, nil
 }
 
+// CreatePersistentVolumeClaim uses the k8s api to setup the given claim
+func (c Client) CreatePersistentVolumeClaim(namespace string, claim *api.PersistentVolumeClaim) (*api.PersistentVolumeClaim, error) {
+	pclaim, err := c.k8.PersistentVolumeClaims(namespace).Create(claim)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create PersistentVolumeClaim")
+	}
+	return pclaim, nil
+
+}
+
 // UpdateDeployConfigInNamespace updates the supplied deploy config in the supplied namespace and returns the deployconfig and any errors that occurred
 func (c Client) UpdateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig) (*dc.DeploymentConfig, error) {
 	var deployed *dc.DeploymentConfig

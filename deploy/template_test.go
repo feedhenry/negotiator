@@ -197,6 +197,82 @@ func TestDeploy(t *testing.T) {
 				"UpdateRouteInNamespace":        1,
 			},
 		},
+		{
+			TestName: "test deploy data",
+			Calls: map[string]int{
+				"CreateDeployConfigInNamespace": 1,
+				"CreateServiceInNamespace":      1,
+				"CreatePersistentVolumeClaim":   1,
+			},
+			Template:  "data",
+			NameSpace: "test",
+			Payload: &deploy.Payload{
+				Target: &deploy.Target{
+					Host:  "http://test.com",
+					Token: "test",
+				},
+				ServiceName:  "cacheservice",
+				Domain:       "rhmap",
+				ProjectGUID:  "guid",
+				CloudAppGUID: "guid",
+				Env:          "env",
+				Replicas:     1,
+				EnvVars: []*deploy.EnvVar{
+					{
+						Name:  "test",
+						Value: "test",
+					},
+				},
+			},
+		},
+		{
+			TestName: "test deploy data with specified size",
+			Calls: map[string]int{
+				"CreateDeployConfigInNamespace": 1,
+				"CreateServiceInNamespace":      1,
+				"CreatePersistentVolumeClaim":   1,
+			},
+			Asserts: map[string]func(interface{}) error{
+				"CreatePersistentVolumeClaim": func(pvc interface{}) error {
+					if nil == pvc {
+						return errors.New("did not expect nil PersistentVolumeClaim")
+					}
+					dep := pvc.(*api.PersistentVolumeClaim)
+					if nil == dep {
+						return fmt.Errorf("expected a PersistentVolumeClaim but got none")
+					}
+					storage := dep.Spec.Resources.Requests["storage"]
+					st := &storage
+					if st.String() != "5Gi" {
+						return fmt.Errorf("expected 5Gi but got %s", st.String())
+					}
+					return nil
+				},
+			},
+			Template:  "data",
+			NameSpace: "test",
+			Payload: &deploy.Payload{
+				Target: &deploy.Target{
+					Host:  "http://test.com",
+					Token: "test",
+				},
+				ServiceName:  "dataservice",
+				Domain:       "rhmap",
+				ProjectGUID:  "guid",
+				CloudAppGUID: "guid",
+				Env:          "env",
+				Replicas:     1,
+				Options: map[string]interface{}{
+					"storage": "5Gi",
+				},
+				EnvVars: []*deploy.EnvVar{
+					{
+						Name:  "test",
+						Value: "test",
+					},
+				},
+			},
+		},
 	}
 	tl := openshift.NewTemplateLoaderDecoder("../resources/templates/")
 	for _, tc := range cases {
