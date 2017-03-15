@@ -39,6 +39,7 @@ type Client interface {
 	CreateBuildConfigInNamespace(namespace string, b *bc.BuildConfig) (*bc.BuildConfig, error)
 	CreateDeployConfigInNamespace(namespace string, d *dc.DeploymentConfig) (*dc.DeploymentConfig, error)
 	CreateSecretInNamespace(namespace string, s *k8api.Secret) (*k8api.Secret, error)
+	CreatePersistentVolumeClaim(namespace string, claim *k8api.PersistentVolumeClaim) (*k8api.PersistentVolumeClaim, error)
 	UpdateBuildConfigInNamespace(namespace string, b *bc.BuildConfig) (*bc.BuildConfig, error)
 	UpdateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig) (*dc.DeploymentConfig, error)
 	UpdateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route, error)
@@ -61,16 +62,17 @@ type Controller struct {
 
 // Payload represents a deployment payload
 type Payload struct {
-	ServiceName  string    `json:"serviceName"`
-	Route        string    `json:"route"`
-	ProjectGUID  string    `json:"projectGuid"`
-	CloudAppGUID string    `json:"cloudAppGuid"`
-	Domain       string    `json:"domain"`
-	Env          string    `json:"env"`
-	Replicas     int       `json:"replicas"`
-	EnvVars      []*EnvVar `json:"envVars"`
-	Repo         *Repo     `json:"repo"`
-	Target       *Target   `json:"target"`
+	ServiceName  string                 `json:"serviceName"`
+	Route        string                 `json:"route"`
+	ProjectGUID  string                 `json:"projectGuid"`
+	CloudAppGUID string                 `json:"cloudAppGuid"`
+	Domain       string                 `json:"domain"`
+	Env          string                 `json:"env"`
+	Replicas     int                    `json:"replicas"`
+	EnvVars      []*EnvVar              `json:"envVars"`
+	Repo         *Repo                  `json:"repo"`
+	Target       *Target                `json:"target"`
+	Options      map[string]interface{} `json:"options"`
 }
 
 // Dispatched represents what is returned when a deploy dispatches sucessfully
@@ -231,7 +233,10 @@ func (c Controller) Template(client Client, template, nameSpace string, deploy *
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode into a os template: ")
 	}
-	searchCrit := map[string]string{"rhmap/guid": deploy.CloudAppGUID}
+	searchCrit := map[string]string{"rhmap/name": deploy.ServiceName}
+	if deploy.CloudAppGUID != "" {
+		searchCrit = map[string]string{"rhmap/guid": deploy.CloudAppGUID}
+	}
 	dcs, err := client.FindDeploymentConfigsByLabel(nameSpace, searchCrit)
 	if err != nil {
 		return nil, errors.Wrap(err, "error trying to find deployment config: ")
@@ -293,6 +298,10 @@ func (c Controller) create(client Client, template *Template, nameSpace string, 
 			}
 		case *k8api.Secret:
 			if _, err := client.CreateSecretInNamespace(nameSpace, ob.(*k8api.Secret)); err != nil {
+				return nil, err
+			}
+		case *k8api.PersistentVolumeClaim:
+			if _, err := client.CreatePersistentVolumeClaim(nameSpace, ob.(*k8api.PersistentVolumeClaim)); err != nil {
 				return nil, err
 			}
 		}

@@ -52,6 +52,21 @@ func (pc PassClient) GetDeploymentConfigByName(ns, deploymentName string) (*dcap
 
 }
 
+func (pc PassClient) CreatePersistentVolumeClaim(namespace string, claim *api.PersistentVolumeClaim) (*api.PersistentVolumeClaim, error) {
+	pc.Called["CreatePersistentVolumeClaim"]++
+	if e, ok := pc.Error["CreatePersistentVolumeClaim"]; ok {
+		return nil, e
+	}
+	var ret = claim
+	if pc.Returns["CreatePersistentVolumeClaim"] != nil {
+		ret = pc.Returns["CreatePersistentVolumeClaim"].(*api.PersistentVolumeClaim)
+	}
+	if assert, ok := pc.Asserts["CreatePersistentVolumeClaim"]; ok {
+		return ret, assert(ret)
+	}
+	return ret, nil
+}
+
 func (pc PassClient) FindDeploymentConfigsByLabel(ns string, searchLabels map[string]string) ([]dcapi.DeploymentConfig, error) {
 	pc.Called["FindDeploymentConfigsByLabel"]++
 	if e, ok := pc.Error["FindDeploymentConfigsByLabel"]; ok {

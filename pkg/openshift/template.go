@@ -3,6 +3,7 @@ package openshift
 import (
 	"bytes"
 	"fmt"
+	"math/rand"
 
 	"github.com/openshift/origin/pkg/template/api"
 	"k8s.io/kubernetes/pkg/runtime"
@@ -20,9 +21,12 @@ import (
 // PackagedTemplates map of locally stored templates
 var PackagedTemplates = map[string]string{}
 
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+
 func init() {
 	PackagedTemplates["cloudapp"] = templates.CloudAppTemplate
 	PackagedTemplates["cache"] = templates.CacheTemplate
+	PackagedTemplates["data"] = templates.DataTemplate
 }
 
 func (tl *templateLoaderDecoder) Load(name string) (*template.Template, error) {
@@ -31,6 +35,20 @@ func (tl *templateLoaderDecoder) Load(name string) (*template.Template, error) {
 	t.Funcs(template.FuncMap{
 		"isEnd": func(n, total int) bool {
 			return n == total-1
+		},
+		"genPass": func() string {
+			b := make([]byte, 16)
+			for i := range b {
+				b[i] = letterBytes[rand.Intn(len(letterBytes))]
+			}
+			return string(b)
+		},
+		"isset": func(vals map[string]interface{}, key string) bool {
+			if nil == vals {
+				return false
+			}
+			_, ok := vals[key]
+			return ok
 		},
 	})
 	//check our own packagedTemplates first
@@ -65,7 +83,6 @@ func (tl *templateLoaderDecoder) Decode(data []byte) (*deploy.Template, error) {
 	dec := tl.decoder
 	obj, _, err := dec.Decode(data, nil, nil)
 	if err != nil {
-		fmt.Println(string(data))
 		return nil, errors.Wrap(err, "failed to decode template ")
 	}
 	tmpl, ok := obj.(*api.Template)
