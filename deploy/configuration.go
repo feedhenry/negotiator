@@ -110,6 +110,10 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, deployme
 	for _, s := range services {
 		serviceName := s.Labels["rhmap/name"]
 		c := cac.ConfigurationFactory.Factory(serviceName)
+		if nil == c{
+			cac.logger.Info("no configurer for service " + serviceName)
+			continue
+		}
 		if _, err := c.Configure(client, deployment, namespace); err != nil {
 			errs = append(errs, err.Error())
 		}
