@@ -53,7 +53,9 @@ var CacheTemplate = `
                     "rhmap/domain": "{{.Domain}}",
                     "rhmap/env": "{{.Env}}",
                     "rhmap/guid": "{{.CloudAppGUID}}",
-                    "rhmap/project": "{{.ProjectGUID}}"
+                    "rhmap/project": "{{.ProjectGUID}}",
+                    "rhmap/name": "cache",
+                    "rhmap/type":"environmentService"
                 },
                 "annotations": {
                     "description": "Defines how to deploy the redis caching layer"

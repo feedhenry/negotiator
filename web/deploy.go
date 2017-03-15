@@ -13,7 +13,6 @@ import (
 
 	"os"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/feedhenry/negotiator/deploy"
 	"github.com/feedhenry/negotiator/pkg/log"
 	"github.com/gorilla/mux"
@@ -55,6 +54,10 @@ func (d Deploy) Deploy(res http.ResponseWriter, req *http.Request) {
 		d.handleDeployError(err, "failed to decode json "+err.Error(), res)
 		return
 	}
+	if err := payload.Validate(template); err != nil {
+		d.handleDeployError(err, "validation failed: ", res)
+		return
+	}
 	client, err := d.clientFactory.DefaultDeployClient(payload.Target.Host, payload.Target.Token)
 	if err != nil {
 		d.handleDeployErrorWithStatus(err, http.StatusUnauthorized, res)
@@ -65,13 +68,10 @@ func (d Deploy) Deploy(res http.ResponseWriter, req *http.Request) {
 		d.handleDeployError(err, "unexpected error deploying template: ", res)
 		return
 	}
-	logrus.Info("sending response")
-	logrus.Info(complete)
 	if err := encoder.Encode(complete); err != nil {
 		d.handleDeployError(err, "failed to encode response: ", res)
 		return
 	}
-	logrus.Info("completed")
 }
 
 func (d Deploy) handleDeployError(err error, msg string, rw http.ResponseWriter) {
