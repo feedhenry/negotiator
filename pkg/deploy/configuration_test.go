@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/feedhenry/negotiator/deploy"
+	"github.com/feedhenry/negotiator/pkg/deploy"
 	"github.com/feedhenry/negotiator/pkg/mock"
 	dcapi "github.com/openshift/origin/pkg/deploy/api"
 	"k8s.io/kubernetes/pkg/api"

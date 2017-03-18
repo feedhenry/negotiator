@@ -1,7 +1,7 @@
 package mock
 
 import (
-	"github.com/feedhenry/negotiator/deploy"
+	"github.com/feedhenry/negotiator/pkg/deploy"
 	bc "github.com/openshift/origin/pkg/build/api"
 	dcapi "github.com/openshift/origin/pkg/deploy/api"
 	ioapi "github.com/openshift/origin/pkg/image/api"

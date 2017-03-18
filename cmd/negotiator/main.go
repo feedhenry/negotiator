@@ -7,10 +7,10 @@ import (
 	"flag"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/feedhenry/negotiator/config"
-	"github.com/feedhenry/negotiator/deploy"
+	"github.com/feedhenry/negotiator/pkg/config"
+	"github.com/feedhenry/negotiator/pkg/deploy"
 	pkgos "github.com/feedhenry/negotiator/pkg/openshift"
-	"github.com/feedhenry/negotiator/web"
+	"github.com/feedhenry/negotiator/pkg/web"
 )
 
 var logLevel string

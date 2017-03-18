@@ -24,6 +24,7 @@ import (
 type TemplateLoader interface {
 	Load(name string) (*template.Template, error)
 	List() ([]*Template, error)
+	FindInTemplate(t *api.Template, resource string) (interface{}, error)
 }
 
 // TemplateDecoder defines how deploy wants to decode the templates into data structures
@@ -246,7 +247,7 @@ func (c Controller) Template(client Client, template, nameSpace string, deploy *
 		return nil, errors.Wrap(err, "error trying to find build config: ")
 	}
 	//check if already deployed
-	if len(dcs) > 0 || nil != bc {
+	if len(dcs) > 0 || (nil != bc && len(dcs) > 0) {
 		dispatched, err = c.update(client, &dcs[0], bc, osTemplate, nameSpace, deploy)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error updating deploy: ")

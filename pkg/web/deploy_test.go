@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/feedhenry/negotiator/deploy"
+	"github.com/feedhenry/negotiator/pkg/deploy"
 	"github.com/feedhenry/negotiator/pkg/mock"
 	"github.com/feedhenry/negotiator/pkg/openshift"
-	"github.com/feedhenry/negotiator/web"
+	"github.com/feedhenry/negotiator/pkg/web"
 	bc "github.com/openshift/origin/pkg/build/api"
 )
 
