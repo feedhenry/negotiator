@@ -3,7 +3,7 @@ package openshift
 import (
 	"fmt"
 
-	"github.com/feedhenry/negotiator/deploy"
+	"github.com/feedhenry/negotiator/pkg/deploy"
 	bc "github.com/openshift/origin/pkg/build/api"
 	bcv1 "github.com/openshift/origin/pkg/build/api/v1"
 	oclient "github.com/openshift/origin/pkg/client"

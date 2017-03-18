@@ -13,7 +13,7 @@ import (
 
 	"os"
 
-	"github.com/feedhenry/negotiator/deploy"
+	"github.com/feedhenry/negotiator/pkg/deploy"
 	"github.com/feedhenry/negotiator/pkg/log"
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"

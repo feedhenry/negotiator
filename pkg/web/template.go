@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/feedhenry/negotiator/deploy"
+	"github.com/feedhenry/negotiator/pkg/deploy"
 )
 
 // TemplateHandler is the handler for the /services/template route

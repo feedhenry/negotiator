@@ -12,7 +12,7 @@ import (
 	"reflect"
 	"text/template"
 
-	"github.com/feedhenry/negotiator/deploy"
+	"github.com/feedhenry/negotiator/pkg/deploy"
 	"github.com/feedhenry/negotiator/pkg/openshift/templates"
 	"github.com/pkg/errors"
 	kapi "k8s.io/kubernetes/pkg/api"
@@ -90,23 +90,12 @@ func (tl *templateLoaderDecoder) Decode(data []byte) (*deploy.Template, error) {
 		kind := reflect.Indirect(reflect.ValueOf(obj)).Type().Name()
 		return nil, fmt.Errorf("top level object must be of kind Template, found %s", kind)
 	}
-
-	return &deploy.Template{Template: tmpl}, tl.resolveObjects(tmpl)
-}
-
-func (tl *templateLoaderDecoder) resolveObjects(tmpl *api.Template) error {
-	dec := tl.decoder
-
-	for i, obj := range tmpl.Objects {
-		if unknown, ok := obj.(*runtime.Unknown); ok {
-			decoded, _, err := dec.Decode(unknown.Raw, nil, nil)
-			if err != nil {
-				return errors.Wrap(err, "failed to decode raw. Ensure to call AddToScheme")
-			}
-			tmpl.Objects[i] = decoded
-		}
+	errs := runtime.DecodeList(tmpl.Objects, kapi.Codecs.UniversalDecoder())
+	if len(errs) > 0 {
+		return nil, errs[0]
 	}
-	return nil
+
+	return &deploy.Template{Template: tmpl}, nil
 }
 
 func (tl *templateLoaderDecoder) List() ([]*deploy.Template, error) {
@@ -130,4 +119,14 @@ func (tl *templateLoaderDecoder) List() ([]*deploy.Template, error) {
 		ts = append(ts, decoded)
 	}
 	return ts, err
+}
+
+func (tl *templateLoaderDecoder) FindInTemplate(t *api.Template, resource string) (interface{}, error) {
+	for _, obj := range t.Objects {
+		if resource == reflect.Indirect(reflect.ValueOf(obj)).Type().Name() {
+			return obj, nil
+		}
+
+	}
+	return nil, errors.New("resource not found in template " + resource)
 }
