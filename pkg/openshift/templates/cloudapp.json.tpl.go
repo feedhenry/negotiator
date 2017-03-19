@@ -267,9 +267,6 @@ var CloudAppTemplate = `
               "rhmap/env": "{{.Env}}",
               "rhmap/guid": "{{.CloudAppGUID}}",
               "rhmap/project": "{{.ProjectGUID}}"
-            },
-            "annotations":{
-              "pod.beta.kubernetes.io/init-containers":"[{\"name\": \"init-myservice\",\"image\": \"busybox\",\"command\": [\"sh\", \"-c\", \"until nslookup myservice; do echo waiting for myservice; sleep 2; done;\"]}]"
             }
           },
           "spec": {

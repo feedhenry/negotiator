@@ -2,3 +2,4 @@ vendor/k8s.io/kubernetes/third_party/swagger-ui
 .idea
 js.json
 cmd/negotiator/negotiator
+cmd/jobs/jobs
