@@ -40,6 +40,7 @@ func main() {
 		serviceConfigFactory := &deploy.ConfigurationFactory{
 			StatusPublisher: deploy.LogStatusPublisher{Logger: logger},
 			TemplateLoader:  templates,
+			Logger:          logger,
 		}
 		serviceConfigController := deploy.NewEnvironmentServiceConfigController(serviceConfigFactory, logger, nil, templates)
 		deployController := deploy.New(templates, templates, logger, serviceConfigController)

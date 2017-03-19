@@ -35,6 +35,7 @@ func (lsp LogStatusPublisher) Publish(confifJobID string, status ConfigurationSt
 type ConfigurationFactory struct {
 	StatusPublisher StatusPublisher
 	TemplateLoader  TemplateLoader
+	Logger          log.Logger
 }
 
 // Publisher allows us to set the StatusPublisher for the Configurers
@@ -53,6 +54,7 @@ func (cf *ConfigurationFactory) Factory(service string) Configurer {
 		return &DataConfigure{
 			StatusPublisher: cf.StatusPublisher,
 			TemplateLoader:  cf.TemplateLoader,
+			logger:          cf.Logger,
 		}
 	}
 	panic("unknown service type cannot configure")
@@ -151,6 +153,7 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, deployme
 	if _, err := client.UpdateDeployConfigInNamespace(namespace, deployment); err != nil {
 		return errors.Wrap(err, "failed to update deployment after configuring it ")
 	}
+	//TODO given we have a status updater do we really need to return errors from the configuration handlers
 	if len(errs) > 0 {
 		return errors.New("some services failed to configure: " + strings.Join(errs, " : "))
 	}
@@ -194,20 +197,27 @@ func (c *CacheConfigure) Configure(client Client, deployment *dc.DeploymentConfi
 type DataConfigure struct {
 	StatusPublisher StatusPublisher
 	TemplateLoader  TemplateLoader
+	status          *ConfigurationStatus
+	logger          log.Logger
+}
+
+func (d *DataConfigure) statusUpdate(key, message, status string) {
+	if d.status == nil {
+		d.status = &ConfigurationStatus{Started: time.Now(), Log: []string{}}
+	}
+	d.status.Log = append(d.status.Log, message)
+	d.status.Status = status
+	if err := d.StatusPublisher.Publish(key, *d.status); err != nil {
+		d.logger.Info("failed to publish status", err.Error())
+	}
 }
 
 // Configure takes an apps DeployConfig and sets of a job to create a new user and database in the mongodb data service. It also sets the expected env var FH_MONGODB_CONN_URL on the apps DeploymentConfig so it can be used to connect to the data service
 func (d *DataConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
-	var configurationStatus = ConfigurationStatus{Started: time.Now(), Log: []string{}}
-	var statusUpdate = func(message, status string) {
-		configurationStatus.Status = status
-		configurationStatus.Log = append(configurationStatus.Log, message)
-		d.StatusPublisher.Publish(deployment.GetResourceVersion(), configurationStatus)
-	}
-	statusUpdate("starting configuration of data service for "+deployment.Name, configInProgress)
+	d.statusUpdate(deployment.Name, "starting configuration of data service for "+deployment.Name, configInProgress)
 	if v, ok := deployment.Labels["rhmap/name"]; ok {
 		if v == "data" {
-			statusUpdate("no need to configure own DeploymentConfig ", configComplete)
+			d.statusUpdate(deployment.Name, "no need to configure data DeploymentConfig ", configComplete)
 			return deployment, nil
 		}
 	}
@@ -220,22 +230,22 @@ func (d *DataConfigure) Configure(client Client, deployment *dc.DeploymentConfig
 	}
 	dataDc, err := client.FindDeploymentConfigsByLabel(namespace, map[string]string{"rhmap/name": "data"})
 	if err != nil {
-		statusUpdate("failed to find data DeploymentConfig. Cannot continue "+err.Error(), configError)
+		d.statusUpdate(deployment.Name, "failed to find data DeploymentConfig. Cannot continue "+err.Error(), configError)
 		return nil, err
 	}
 	if len(dataDc) == 0 {
 		err := errors.New("no data DeploymentConfig exists. Cannot continue")
-		statusUpdate(err.Error(), configError)
+		d.statusUpdate(deployment.Name, err.Error(), configError)
 		return nil, err
 	}
 	dataService, err := client.FindServiceByLabel(namespace, map[string]string{"rhmap/name": "data"})
 	if err != nil {
-		statusUpdate("failed to find data service cannot continue "+err.Error(), configError)
+		d.statusUpdate(deployment.Name, "failed to find data service cannot continue "+err.Error(), configError)
 		return nil, err
 	}
 	if len(dataService) == 0 {
 		err := errors.New("no service for data found. Cannot continue")
-		statusUpdate(err.Error(), configError)
+		d.statusUpdate(deployment.Name, err.Error(), configError)
 		return nil, err
 	}
 	jobOpts := map[string]interface{}{}
@@ -253,7 +263,7 @@ func (d *DataConfigure) Configure(client Client, deployment *dc.DeploymentConfig
 	}
 	if !foundAdminPassword {
 		err := errors.New("expected to find an admin password but there was non present")
-		statusUpdate(err.Error(), configError)
+		d.statusUpdate(deployment.Name, err.Error(), configError)
 		return nil, err
 	}
 	jobOpts["dbhost"] = dataService[0].GetName()
@@ -285,26 +295,26 @@ func (d *DataConfigure) Configure(client Client, deployment *dc.DeploymentConfig
 	}
 	tpl, err := d.TemplateLoader.Load("data-job")
 	if err != nil {
-		statusUpdate("failed to load job template "+err.Error(), configError)
+		d.statusUpdate(deployment.Name, "failed to load job template "+err.Error(), configError)
 		return nil, errors.Wrap(err, "failed to load template data-job ")
 	}
 	var buf bytes.Buffer
 	if err := tpl.ExecuteTemplate(&buf, "data-job", jobOpts); err != nil {
 		err = errors.Wrap(err, "failed to execute template: ")
-		statusUpdate(err.Error(), configError)
+		d.statusUpdate(deployment.Name, err.Error(), configError)
 		return nil, err
 	}
 	j := &batch.Job{}
 	if err := runtime.DecodeInto(k8api.Codecs.UniversalDecoder(), buf.Bytes(), j); err != nil {
 		err = errors.Wrap(err, "failed to Decode job")
-		statusUpdate(err.Error(), "error")
+		d.statusUpdate(deployment.Name, err.Error(), "error")
 		return nil, err
 	}
 	//set off job and watch it till complete
 	go func() {
 		w, err := client.CreateJobToWatch(j, namespace)
 		if err != nil {
-			statusUpdate("failed to CreateJobToWatch "+err.Error(), configError)
+			d.statusUpdate(deployment.Name, "failed to CreateJobToWatch "+err.Error(), configError)
 			return
 		}
 		result := w.ResultChan()
@@ -313,18 +323,18 @@ func (d *DataConfigure) Configure(client Client, deployment *dc.DeploymentConfig
 			case watch.Added, watch.Modified:
 				j := ws.Object.(*batch.Job)
 				if j.Status.Succeeded >= 1 {
-					statusUpdate("configuration job succeeded ", configComplete)
+					d.statusUpdate(deployment.Name, "configuration job succeeded ", configComplete)
 					w.Stop()
 				}
-				statusUpdate(fmt.Sprintf("job status succeeded %d failed %d", j.Status.Succeeded, j.Status.Failed), configInProgress)
+				d.statusUpdate(deployment.Name, fmt.Sprintf("job status succeeded %d failed %d", j.Status.Succeeded, j.Status.Failed), configInProgress)
 				for _, condition := range j.Status.Conditions {
 					if condition.Reason == "DeadlineExceeded" {
-						statusUpdate("configuration job failed to configure database in time "+condition.Message, configError)
+						d.statusUpdate(deployment.Name, "configuration job failed to configure database in time "+condition.Message, configError)
 						w.Stop()
 					}
 				}
 			case watch.Error:
-				statusUpdate(" data configuration job error ", configError)
+				d.statusUpdate(deployment.Name, " data configuration job error ", configError)
 				w.Stop()
 			}
 
