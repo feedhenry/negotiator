@@ -282,7 +282,7 @@ func TestDeploy(t *testing.T) {
 				pc.Returns = tc.Returns
 			}
 			pc.Asserts = tc.Asserts
-			sc := deploy.NewEnvironmentServiceConfigController(&mockServiceConfigFactory{}, logrus.StandardLogger(), nil)
+			sc := deploy.NewEnvironmentServiceConfigController(&mockServiceConfigFactory{}, logrus.StandardLogger(), nil, tl)
 			dc := deploy.New(tl, tl, logrus.StandardLogger(), sc)
 			_, err := dc.Template(pc, tc.Template, tc.NameSpace, tc.Payload)
 			if !tc.ExpectError && err != nil {

@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-VERSION := v0.0.4
+VERSION := v0.0.5
 NAME := negotiator
 
 .PHONY: all
@@ -31,17 +31,9 @@ vet:
 test-unit:
 	go test -v --cover -cpu=2 `go list ./... | grep -v /vendor/ | grep -v /design`
 
-.PHONY: test-all
-test-all:
-	go test -cpu=2 -cover `go list ./... | grep -v /vendor/` -integration=true
-
 .PHONY: test-race
 test-race:
     go test -v -cpu=1,2,4 -short -race `go list ./... | grep -v /vendor/`
-
-.PHONY: test-with-vendor
-test-with-vendor:
-	go test -v -cpu=2 ./...
 
 build:
 	cd cmd/negotiator && go build -ldflags "-X main.Version=$(VERSION)"
@@ -49,7 +41,7 @@ build:
 
 build_linux:
 	cd cmd/negotiator && env GOOS=linux go build -ldflags "-X main.Version=$(VERSION)"
-	cd cmd/services && env GOOS=linux go build -ldflags "-X main.Version=$(VERSION)"
+	cd cmd/jobs && env GOOS=linux go build -ldflags "-X main.Version=$(VERSION)"
 
 deps:
 	go get github.com/c4milo/github-release

@@ -45,7 +45,7 @@ var deployCmd = &cobra.Command{
 		template := args[0]
 		logger := logrus.StandardLogger()
 		serviceConfigFactory := &deploy.ConfigurationFactory{StatusPublisher: deploy.LogStatusPublisher{Logger: logger}}
-		serviceConfigController := deploy.NewEnvironmentServiceConfigController(serviceConfigFactory, logger, nil)
+		serviceConfigController := deploy.NewEnvironmentServiceConfigController(serviceConfigFactory, logger, nil, tl)
 		deployController := deploy.New(tl, tl, logger, serviceConfigController)
 		payload := deploy.Payload{
 			Repo: &deploy.Repo{

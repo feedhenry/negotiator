@@ -27,6 +27,7 @@ func init() {
 	PackagedTemplates["cloudapp"] = templates.CloudAppTemplate
 	PackagedTemplates["cache"] = templates.CacheTemplate
 	PackagedTemplates["data"] = templates.DataTemplate
+	PackagedTemplates["data-job"] = templates.DataConfigJob
 }
 
 func (tl *templateLoaderDecoder) Load(name string) (*template.Template, error) {

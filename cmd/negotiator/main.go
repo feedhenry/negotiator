@@ -37,8 +37,11 @@ func main() {
 	// deploy setup
 	{
 		//not use a log publisher this would be replaced with something that published to redis
-		serviceConfigFactory := &deploy.ConfigurationFactory{StatusPublisher: deploy.LogStatusPublisher{Logger: logger}}
-		serviceConfigController := deploy.NewEnvironmentServiceConfigController(serviceConfigFactory, logger, nil)
+		serviceConfigFactory := &deploy.ConfigurationFactory{
+			StatusPublisher: deploy.LogStatusPublisher{Logger: logger},
+			TemplateLoader:  templates,
+		}
+		serviceConfigController := deploy.NewEnvironmentServiceConfigController(serviceConfigFactory, logger, nil, templates)
 		deployController := deploy.New(templates, templates, logger, serviceConfigController)
 		web.DeployRoute(router, logger, deployController, clientFactory)
 	}
