@@ -1,8 +1,8 @@
 package templates
 
 //CacheTemplate defines the template for deploying a cache environment service to openshift 3
-var CacheTemplate = `
-{{define "cache"}}
+var CacheRedisTemplate = `
+{{define "cache-redis"}}
 {
     "kind": "Template",
     "apiVersion": "v1",
@@ -54,7 +54,7 @@ var CacheTemplate = `
                     "rhmap/env": "{{.Env}}",
                     "rhmap/guid": "{{.CloudAppGUID}}",
                     "rhmap/project": "{{.ProjectGUID}}",
-                    "rhmap/name": "cache",
+                    "rhmap/name": "cache-redis",
                     "rhmap/type":"environmentService"
                 },
                 "annotations": {
@@ -81,13 +81,13 @@ var CacheTemplate = `
                 "template": {
                     "metadata": {
                         "name": "{{.ServiceName}}",
-                                        "labels": {
-                                            "name": "{{.ServiceName}}",
-                                            "rhmap/domain": "{{.Domain}}",
-                                            "rhmap/env": "{{.Env}}",
-                                            "rhmap/guid": "{{.CloudAppGUID}}",
-                                            "rhmap/project": "{{.ProjectGUID}}"
-                                        }
+                        "labels": {
+                            "name": "{{.ServiceName}}",
+                            "rhmap/domain": "{{.Domain}}",
+                            "rhmap/env": "{{.Env}}",
+                            "rhmap/guid": "{{.CloudAppGUID}}",
+                            "rhmap/project": "{{.ProjectGUID}}"
+                        }
                     },
                     "spec": {
                         "containers": [

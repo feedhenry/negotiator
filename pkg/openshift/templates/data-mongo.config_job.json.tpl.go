@@ -1,14 +1,14 @@
 package templates
 
-var DataConfigJob = `
-{{define "data-job"}}
+var DataMongoConfigJob = `
+{{define "data-mongo-job"}}
 {
   "apiVersion": "batch/v1",
   "kind": "Job",
   "metadata": {
     "name": "{{index . "name"}}-dataconfig-job",
 	"labels": {
-		"rhmap/name":"dataconfig"
+		"rhmap/name":"datamongoconfig"
 	}
   },
   "spec": {
@@ -20,10 +20,10 @@ var DataConfigJob = `
       "spec": {
         "containers": [
           {
-            "name": "dataconfig",
+            "name": "datamongoconfig",
             "image": "feedhenry/negotiator:0.0.5",
             "command": ["jobs",	
-              "dataconfig",
+              "datamongoconfig",
 			  "--admin-user={{if isset . "admin-user"}}{{ index . "admin-user"}}{{end}}",
 			  "--admin-pass={{if isset . "admin-pass"}}{{ index . "admin-pass"}}{{end}}",
 			  "--database={{if isset . "database"}}{{ index . "database"}}{{end}}",

@@ -27,7 +27,7 @@ func (msp *mockStatusPublisher) Finish(key string) {}
 
 func TestConfiguringCacheJob(t *testing.T) {
 	msp := &mockStatusPublisher{}
-	cacheConfig := deploy.CacheConfigure{StatusPublisher: msp}
+	cacheConfig := deploy.CacheRedisConfigure{StatusPublisher: msp}
 	depConfig := []dcapi.DeploymentConfig{
 		{ObjectMeta: api.ObjectMeta{Name: "test"}, Spec: dcapi.DeploymentConfigSpec{
 			Template: &api.PodTemplateSpec{
@@ -150,7 +150,7 @@ func TestConfiguringCacheJob(t *testing.T) {
 func TestDataConfigurationJob(t *testing.T) {
 	tl := openshift.NewTemplateLoaderDecoder("../resources/templates/")
 	msp := &mockStatusPublisher{}
-	dataConfig := deploy.DataConfigure{StatusPublisher: msp, TemplateLoader: tl}
+	dataConfig := deploy.DataMongoConfigure{StatusPublisher: msp, TemplateLoader: tl}
 	cases := []struct {
 		TestName    string
 		ExpectError bool
