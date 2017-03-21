@@ -27,7 +27,7 @@ func init() {
 	PackagedTemplates["cloudapp"] = templates.CloudAppTemplate
 	PackagedTemplates["cache-redis"] = templates.CacheRedisTemplate
 	PackagedTemplates["data-mongo"] = templates.DataMongoTemplate
-	PackagedTemplates["data-job"] = templates.DataMongoConfigJob
+	PackagedTemplates["data-mongo-job"] = templates.DataMongoConfigJob
 	PackagedTemplates["data-mysql"] = templates.DataMySQLTemplate
 }
 

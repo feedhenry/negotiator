@@ -313,7 +313,7 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 	tpl, err := d.TemplateLoader.Load("data-mongo-job")
 	if err != nil {
 		d.statusUpdate(deployment.Name, "failed to load job template "+err.Error(), configError)
-		return nil, errors.Wrap(err, "failed to load template data-job ")
+		return nil, errors.Wrap(err, "failed to load template data-mongo-job ")
 	}
 	var buf bytes.Buffer
 	if err := tpl.ExecuteTemplate(&buf, "data-mongo-job", jobOpts); err != nil {

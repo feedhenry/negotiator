@@ -24,7 +24,6 @@ var DataMySQLTemplate = `
                     "name": "{{.ServiceName}}",
                     "rhmap/domain": "{{.Domain}}",
                     "rhmap/env": "{{.Env}}",
-                    "rhmap/guid": "{{.CloudAppGUID}}",
                     "rhmap/project": "{{.ProjectGUID}}",
                     "rhmap/name": "data-mysql",
                     "rhmap/type":"environmentService"
@@ -73,7 +72,6 @@ var DataMySQLTemplate = `
                     "name": "{{.ServiceName}}",
                     "rhmap/domain": "{{.Domain}}",
                     "rhmap/env": "{{.Env}}",
-                    "rhmap/guid": "{{.CloudAppGUID}}",
                     "rhmap/project": "{{.ProjectGUID}}",
                     "rhmap/name": "data-mysql",
                     "rhmap/type":"environmentService"
@@ -99,7 +97,6 @@ var DataMySQLTemplate = `
                             "name": "data-mysql",
                             "rhmap/domain": "{{.Domain}}",
                             "rhmap/env": "{{.Env}}",
-                            "rhmap/guid": "{{.CloudAppGUID}}",
                             "rhmap/project": "{{.ProjectGUID}}"
                         }
                     },

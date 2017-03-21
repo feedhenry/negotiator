@@ -77,7 +77,7 @@ func TestConfiguringCacheJob(t *testing.T) {
 				}
 				varFound := false
 				for _, env := range d.Spec.Template.Spec.Containers[0].Env {
-					if env.Name == "FH_REDIS_HOST" && env.Value == "cache" {
+					if env.Name == "FH_REDIS_HOST" && env.Value == "data-cache" {
 						varFound = true
 					}
 				}
@@ -110,7 +110,7 @@ func TestConfiguringCacheJob(t *testing.T) {
 				}
 				varFound := false
 				for _, env := range d.Spec.Template.Spec.Containers[0].Env {
-					if env.Name == "FH_REDIS_HOST" && env.Value == "cache" {
+					if env.Name == "FH_REDIS_HOST" && env.Value == "data-cache" {
 						varFound = true
 					}
 				}
@@ -148,7 +148,7 @@ func TestConfiguringCacheJob(t *testing.T) {
 }
 
 func TestDataConfigurationJob(t *testing.T) {
-	tl := openshift.NewTemplateLoaderDecoder("../resources/templates/")
+	tl := openshift.NewTemplateLoaderDecoder("../openshift/templates/")
 	msp := &mockStatusPublisher{}
 	dataConfig := deploy.DataMongoConfigure{StatusPublisher: msp, TemplateLoader: tl}
 	cases := []struct {
