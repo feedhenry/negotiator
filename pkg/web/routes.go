@@ -39,7 +39,7 @@ func BuildHTTPHandler(r *mux.Router) http.Handler {
 	return n
 }
 
-// DeployRoute sets up the deploy route
+// DeployRoute sets up the deploy route. Note if we were to turn this into a broker it would become the provision endpoint PUT /v2/service_instances/:instance_id
 func DeployRoute(r *mux.Router, logger log.Logger, controller *deploy.Controller, clientFactory DeployClientFactory) {
 	deployHandler := NewDeployHandler(logger, controller, clientFactory)
 	r.HandleFunc("/service/deploy/{template}/{nameSpace}", prometheus.InstrumentHandlerFunc("deployTemplate", deployHandler.Deploy)).Methods("POST")

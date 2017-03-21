@@ -15,9 +15,11 @@ import (
 	"github.com/openshift/origin/pkg/template/api"
 	"github.com/pkg/errors"
 	k8api "k8s.io/kubernetes/pkg/api"
+	"k8s.io/kubernetes/pkg/apis/batch"
 
 	"github.com/feedhenry/negotiator/pkg/log"
 	roapi "github.com/openshift/origin/pkg/route/api"
+	"k8s.io/kubernetes/pkg/watch"
 )
 
 // TemplateLoader defines how deploy wants to load templates in order to be able to deploy them.
@@ -33,6 +35,7 @@ type TemplateDecoder interface {
 }
 
 // Client is the interface this controller expects for interacting with an openshift paas
+// TODO break this up it is getting too big
 type Client interface {
 	CreateServiceInNamespace(ns string, svc *k8api.Service) (*k8api.Service, error)
 	CreateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route, error)
@@ -41,11 +44,13 @@ type Client interface {
 	CreateDeployConfigInNamespace(namespace string, d *dc.DeploymentConfig) (*dc.DeploymentConfig, error)
 	CreateSecretInNamespace(namespace string, s *k8api.Secret) (*k8api.Secret, error)
 	CreatePersistentVolumeClaim(namespace string, claim *k8api.PersistentVolumeClaim) (*k8api.PersistentVolumeClaim, error)
+	CreateJobToWatch(j *batch.Job, ns string) (watch.Interface, error)
 	UpdateBuildConfigInNamespace(namespace string, b *bc.BuildConfig) (*bc.BuildConfig, error)
 	UpdateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig) (*dc.DeploymentConfig, error)
 	UpdateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route, error)
 	InstantiateBuild(ns, buildName string) (*bc.Build, error)
 	FindDeploymentConfigsByLabel(ns string, searchLabels map[string]string) ([]dc.DeploymentConfig, error)
+	FindServiceByLabel(ns string, searchLabels map[string]string) ([]k8api.Service, error)
 	FindBuildConfigByLabel(ns string, searchLabels map[string]string) (*bc.BuildConfig, error)
 	GetDeploymentConfigByName(ns, deploymentName string) (*dc.DeploymentConfig, error)
 	DeployLogURL(ns, dc string) string
@@ -135,6 +140,7 @@ func (t Template) hasSecret() bool {
 
 const templateCloudApp = "cloudapp"
 const templateCache = "cache"
+const templateData = "data"
 
 type environmentServices []string
 
@@ -191,7 +197,7 @@ func New(tl TemplateLoader, td TemplateDecoder, logger log.Logger, configuration
 	}
 }
 
-// Template deploys a set of objects based on a template. Templates are located in resources/templates
+// Template deploys a set of objects based on an OSCP Template Object. Templates are located in resources/templates
 func (c Controller) Template(client Client, template, nameSpace string, deploy *Payload) (*Dispatched, error) {
 	var (
 		buf        bytes.Buffer

@@ -20,11 +20,13 @@ import (
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/api/unversioned"
 	"k8s.io/kubernetes/pkg/api/v1"
+	"k8s.io/kubernetes/pkg/apis/batch"
 	k8client "k8s.io/kubernetes/pkg/client/unversioned"
 	"k8s.io/kubernetes/pkg/client/unversioned/clientcmd"
 	clientcmdapi "k8s.io/kubernetes/pkg/client/unversioned/clientcmd/api"
 	kubectlutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 	"k8s.io/kubernetes/pkg/labels"
+	"k8s.io/kubernetes/pkg/watch"
 )
 
 var (
@@ -107,6 +109,39 @@ type Client struct {
 	k8   *k8client.Client
 	oc   *oclient.Client
 	host string
+}
+
+func (c Client) PodLogs(ns, name string, lines int64) ([]byte, error) {
+	res := c.k8.Pods(ns).GetLogs(name, &api.PodLogOptions{TailLines: &lines})
+	result := res.Do()
+	if err := result.Error(); err != nil {
+		return nil, errors.Wrap(err, "failed to get pod logs")
+	}
+	return result.Raw()
+}
+
+// FindServiceByLabel finds services deployed to the namespace based on searchLabels
+func (c Client) FindServiceByLabel(ns string, searchLabels map[string]string) ([]api.Service, error) {
+	opts := api.ListOptions{LabelSelector: labels.SelectorFromSet(searchLabels)}
+	svc, err := c.k8.Services(ns).List(opts)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to list services for labels ")
+	}
+	return svc.Items, nil
+}
+
+// CreateJobToWatch creates a job and returns a watch on that Job
+func (c Client) CreateJobToWatch(j *batch.Job, ns string) (watch.Interface, error) {
+	j, err := c.k8.BatchClient.Jobs(ns).Create(j)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create Job")
+	}
+	opts := api.ListOptions{LabelSelector: labels.SelectorFromSet(j.Labels)}
+	w, err := c.k8.BatchClient.Jobs(ns).Watch(opts)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to create a watch on Job")
+	}
+	return w, nil
 }
 
 // ListBuildConfigs will return all build configs for the given namespace

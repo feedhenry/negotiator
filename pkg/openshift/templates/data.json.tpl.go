@@ -22,7 +22,9 @@ var DataTemplate = `
           "name": "data",
           "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
-          "rhmap/title": "{{.ServiceName}}"
+          "rhmap/title": "{{.ServiceName}}",
+          "rhmap/name": "data",
+          "rhmap/type":"environmentService"
         }
       },
       "spec": {
@@ -52,7 +54,9 @@ var DataTemplate = `
           "name": "data",
           "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
-          "rhmap/title": "{{.ServiceName}}"
+          "rhmap/title": "{{.ServiceName}}",
+          "rhmap/name": "data",
+          "rhmap/type":"environmentService"
         }
       },
       "spec": {
@@ -79,7 +83,9 @@ var DataTemplate = `
           "name": "mongodb",
           "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
-          "rhmap/title": "{{.ServiceName}}"
+          "rhmap/title": "{{.ServiceName}}",
+          "rhmap/name": "data",
+          "rhmap/type":"environmentService"
         }
       },
       "spec": {

@@ -7,6 +7,8 @@ import (
 	ioapi "github.com/openshift/origin/pkg/image/api"
 	roapi "github.com/openshift/origin/pkg/route/api"
 	"k8s.io/kubernetes/pkg/api"
+	"k8s.io/kubernetes/pkg/apis/batch"
+	"k8s.io/kubernetes/pkg/watch"
 )
 
 type ClientFactory struct {
@@ -36,6 +38,28 @@ type PassClient struct {
 	Error   map[string]error
 }
 
+func (pc PassClient) CreateJobToWatch(j *batch.Job, ns string) (watch.Interface, error) {
+	pc.Called["CreateJobToWatch"]++
+	if e, ok := pc.Error["CreateJobToWatch"]; ok {
+		return nil, e
+	}
+	return watch.NewEmptyWatch(), nil
+}
+
+func (pc PassClient) FindServiceByLabel(ns string, searchLabels map[string]string) ([]api.Service, error) {
+	pc.Called["FindServiceByLabel"]++
+	if e, ok := pc.Error["FindServiceByLabel"]; ok {
+		return nil, e
+	}
+	var ret = []api.Service{}
+	if pc.Returns["FindServiceByLabel"] != nil {
+		ret = pc.Returns["FindServiceByLabel"].([]api.Service)
+	}
+	if assert, ok := pc.Asserts["FindServiceByLabel"]; ok {
+		return ret, assert(ret)
+	}
+	return ret, nil
+}
 func (pc PassClient) GetDeploymentConfigByName(ns, deploymentName string) (*dcapi.DeploymentConfig, error) {
 	pc.Called["GetDeploymentConfigByName"]++
 	if e, ok := pc.Error["GetDeploymentConfigByName"]; ok {
