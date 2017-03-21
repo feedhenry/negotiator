@@ -10,7 +10,7 @@ var CacheRedisTemplate = `
         "name": "Redis",
         "annotations": {
             "description": "Redis is an in-memory data structure store, used as a database, cache and message broker",
-            "dependenices": "None",
+            "dependencies": "None",
             "tags": "rhmap,redis"
         }
     },

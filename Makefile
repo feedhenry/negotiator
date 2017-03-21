@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-VERSION := 0.0.7
+VERSION := 0.0.8
 NAME := negotiator
 
 # To build for a os you are not on, use:
@@ -27,7 +27,7 @@ build_services:
 	cd cmd/services && go build -ldflags "-X main.Version=v$(VERSION)"
 
 .PHONY: docker_build
-docker_build:
+docker_build: build
 	docker build -t feedhenry/negotiator:${VERSION} .
 
 .PHONY: docker_push
