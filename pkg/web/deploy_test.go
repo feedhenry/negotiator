@@ -61,7 +61,21 @@ func TestDeploys(t *testing.T) {
 			Name:       "test deploy no cache",
 			Body:       `{"target":{"host":"https://notthere.com:8443","token":"token"}, "serviceName": "cloudapp4","replicas": 1,  "projectGuid":"test","envVars":[{"name":"test","value":"test"}]}`,
 			StatusCode: 200,
-			Template:   "cache",
+			Template:   "cache-redis",
+			NameSpace:  "test",
+		},
+		{
+			Name:       "test deploy mysql bad options",
+			Body:       `{"target":{"host":"https://notthere.com:8443","token":"token"}, "serviceName": "cloudapp4","replicas": 1,  "projectGuid":"test","options": {"mysql_user": "sdf"}}`,
+			StatusCode: 400,
+			Template:   "data-mysql",
+			NameSpace:  "test",
+		},
+		{
+			Name:       "test deploy mysql good options",
+			Body:       `{"target":{"host":"https://notthere.com:8443","token":"token"}, "serviceName": "cloudapp4","replicas": 1,  "projectGuid":"test","options": {"mysql_user": "username", "mysql_password": "sdfjhsdfhjksdgjfhs", "mysql_database": "sdfsdfssdfd"}}`,
+			StatusCode: 200,
+			Template:   "data-mysql",
 			NameSpace:  "test",
 		},
 		{

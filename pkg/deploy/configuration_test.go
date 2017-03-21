@@ -27,7 +27,7 @@ func (msp *mockStatusPublisher) Finish(key string) {}
 
 func TestConfiguringCacheJob(t *testing.T) {
 	msp := &mockStatusPublisher{}
-	cacheConfig := deploy.CacheConfigure{StatusPublisher: msp}
+	cacheConfig := deploy.CacheRedisConfigure{StatusPublisher: msp}
 	depConfig := []dcapi.DeploymentConfig{
 		{ObjectMeta: api.ObjectMeta{Name: "test"}, Spec: dcapi.DeploymentConfigSpec{
 			Template: &api.PodTemplateSpec{
@@ -77,7 +77,7 @@ func TestConfiguringCacheJob(t *testing.T) {
 				}
 				varFound := false
 				for _, env := range d.Spec.Template.Spec.Containers[0].Env {
-					if env.Name == "FH_REDIS_HOST" && env.Value == "cache" {
+					if env.Name == "FH_REDIS_HOST" && env.Value == "data-cache" {
 						varFound = true
 					}
 				}
@@ -110,7 +110,7 @@ func TestConfiguringCacheJob(t *testing.T) {
 				}
 				varFound := false
 				for _, env := range d.Spec.Template.Spec.Containers[0].Env {
-					if env.Name == "FH_REDIS_HOST" && env.Value == "cache" {
+					if env.Name == "FH_REDIS_HOST" && env.Value == "data-cache" {
 						varFound = true
 					}
 				}
@@ -148,9 +148,9 @@ func TestConfiguringCacheJob(t *testing.T) {
 }
 
 func TestDataConfigurationJob(t *testing.T) {
-	tl := openshift.NewTemplateLoaderDecoder("../resources/templates/")
+	tl := openshift.NewTemplateLoaderDecoder("../openshift/templates/")
 	msp := &mockStatusPublisher{}
-	dataConfig := deploy.DataConfigure{StatusPublisher: msp, TemplateLoader: tl}
+	dataConfig := deploy.DataMongoConfigure{StatusPublisher: msp, TemplateLoader: tl}
 	cases := []struct {
 		TestName    string
 		ExpectError bool

@@ -1,12 +1,12 @@
 package templates
 
-var DataTemplate = `
-{{define "data"}}
+var DataMongoTemplate = `
+{{define "data-mongo"}}
 {
   "kind": "Template",
   "apiVersion": "v1",
   "metadata": {
-    "name": "mongodb",
+    "name": "data-mongo",
     "annotations": {
       "description": "Mongodb",
       "tags": "rhmap,mongodb"
@@ -17,13 +17,13 @@ var DataTemplate = `
       "kind": "Service",
       "apiVersion": "v1",
       "metadata": {
-        "name": "data",
+        "name": "data-mongo",
         "labels": {
-          "name": "data",
+          "name": "data-mongo",
           "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
-          "rhmap/name": "data",
+          "rhmap/name": "data-mongo§",
           "rhmap/type":"environmentService"
         }
       },
@@ -51,11 +51,11 @@ var DataTemplate = `
       "metadata": {
         "name": "mongodb-claim-1",
 		"labels": {
-          "name": "data",
+          "name": "data-mongo",
           "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
-          "rhmap/name": "data",
+          "rhmap/name": "data-mongo",
           "rhmap/type":"environmentService"
         }
       },
@@ -84,7 +84,7 @@ var DataTemplate = `
           "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
-          "rhmap/name": "data",
+          "rhmap/name": "data-mongo",
           "rhmap/type":"environmentService"
         }
       },
@@ -133,7 +133,7 @@ var DataTemplate = `
                   },
                   {
                     "name": "MONGODB_SERVICE_NAME",
-                    "value": "data"
+                    "value": "data-mongo"
                   },
                   {
                     "name": "MONGODB_KEYFILE_VALUE",
