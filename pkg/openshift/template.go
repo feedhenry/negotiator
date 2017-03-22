@@ -28,6 +28,7 @@ func init() {
 
 	PackagedTemplates["cache-redis"] = templates.CacheRedisTemplate
 	PackagedTemplates["data-mongo"] = templates.DataMongoTemplate
+	PackagedTemplates["data-mongo-replica"] = templates.DataMongoReplicaTemplate
 	PackagedTemplates["data-mongo-job"] = templates.DataMongoConfigJob
 	PackagedTemplates["data-mysql"] = templates.DataMySQLTemplate
 
