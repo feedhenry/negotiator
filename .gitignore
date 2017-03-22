@@ -3,3 +3,5 @@ vendor/k8s.io/kubernetes/third_party/swagger-ui
 js.json
 cmd/negotiator/negotiator
 cmd/jobs/jobs
+cmd/services/services
+.vscode

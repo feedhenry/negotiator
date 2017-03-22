@@ -43,6 +43,12 @@ build_linux:
 	cd cmd/negotiator && env GOOS=linux go build -ldflags "-X main.Version=$(VERSION)"
 	cd cmd/jobs && env GOOS=linux go build -ldflags "-X main.Version=$(VERSION)"
 
+build_linux_negotiator:
+	cd cmd/negotiator && env GOOS=linux go build -ldflags "-X main.Version=$(VERSION)"
+
+build_linux_services:
+	cd cmd/services && env GOOS=linux go build -ldflags "-X main.Version=$(VERSION)"
+
 deps:
 	go get github.com/c4milo/github-release
 	go get github.com/mitchellh/gox

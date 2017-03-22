@@ -1,12 +1,12 @@
 package templates
 
-var DataTemplate = `
+var DataMongoTemplate = `
 {{define "data-mongo"}}
 {
   "kind": "Template",
   "apiVersion": "v1",
   "metadata": {
-    "name": "mongodb",
+    "name": "data-mongo",
     "annotations": {
       "description": "Mongodb",
       "tags": "rhmap,mongodb"
@@ -19,11 +19,11 @@ var DataTemplate = `
       "metadata": {
         "name": "data-mongo",
         "labels": {
-          "name": "data",
+          "name": "data-mongo",
           "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
-          "rhmap/name": "data-mongo",
+          "rhmap/name": "data-mongo§",
           "rhmap/type":"environmentService"
         }
       },
@@ -51,7 +51,7 @@ var DataTemplate = `
       "metadata": {
         "name": "mongodb-claim-1",
 		"labels": {
-          "name": "data",
+          "name": "data-mongo",
           "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",

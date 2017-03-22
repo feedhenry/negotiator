@@ -281,6 +281,7 @@ var CloudAppTemplate = `
                   }
                 ],
                 "env": [
+                  
                   {{$len := len .EnvVars}}
                   {{range $index,$envVar := .EnvVars}}
                   {

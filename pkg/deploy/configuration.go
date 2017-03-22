@@ -45,18 +45,25 @@ func (cf *ConfigurationFactory) Publisher(publisher StatusPublisher) {
 
 // Factory is called to get a new Configurer based on the service type
 func (cf *ConfigurationFactory) Factory(service string) Configurer {
-	if service == templateCache {
-		return &CacheConfigure{
+	switch service {
+	case templateCacheRedis:
+		return &CacheRedisConfigure{
 			StatusPublisher: cf.StatusPublisher,
 		}
-	}
-	if service == templateData {
-		return &DataConfigure{
+	case templateDataMongo:
+		return &DataMongoConfigure{
+			StatusPublisher: cf.StatusPublisher,
+			TemplateLoader:  cf.TemplateLoader,
+			logger:          cf.Logger,
+		}
+	case templateDataMysql:
+		return &DataMysqlConfigure{
 			StatusPublisher: cf.StatusPublisher,
 			TemplateLoader:  cf.TemplateLoader,
 			logger:          cf.Logger,
 		}
 	}
+
 	panic("unknown service type cannot configure")
 }
 
@@ -146,7 +153,8 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, deployme
 	for _, s := range services {
 		serviceName := s.Labels["rhmap/name"]
 		c := cac.ConfigurationFactory.Factory(serviceName)
-		if _, err := c.Configure(client, deployment, namespace); err != nil {
+		_, err := c.Configure(client, deployment, namespace)
+		if err != nil {
 			errs = append(errs, err.Error())
 		}
 	}
@@ -160,13 +168,13 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, deployme
 	return nil
 }
 
-// CacheConfigure is a Configurer for the cache service
-type CacheConfigure struct {
+// CacheRedisConfigure is a Configurer for the cache service
+type CacheRedisConfigure struct {
 	StatusPublisher StatusPublisher
 }
 
 // Configure configures the current DeploymentConfig with the need configuration to use cache
-func (c *CacheConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
+func (c *CacheRedisConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
 	var configurationStatus = ConfigurationStatus{Started: time.Now(), Log: []string{"starting configuration"}, Status: configInProgress}
 	c.StatusPublisher.Publish(deployment.GetResourceVersion(), configurationStatus)
 	var statusUpdate = func(message, status string) {
@@ -185,8 +193,8 @@ func (c *CacheConfigure) Configure(client Client, deployment *dc.DeploymentConfi
 	for ci := range deployment.Spec.Template.Spec.Containers {
 		env := deployment.Spec.Template.Spec.Containers[ci].Env
 		for ei, e := range env {
-			if e.Name == "FH_REDIS_HOST" && e.Value != "cache" {
-				deployment.Spec.Template.Spec.Containers[ci].Env[ei].Value = "cache" //hard coded for time being
+			if e.Name == "FH_REDIS_HOST" && e.Value != "data-cache" {
+				deployment.Spec.Template.Spec.Containers[ci].Env[ei].Value = "data-cache" //hard coded for time being
 				break
 			}
 		}
@@ -194,14 +202,23 @@ func (c *CacheConfigure) Configure(client Client, deployment *dc.DeploymentConfi
 	return deployment, nil
 }
 
-type DataConfigure struct {
+// DataMongoConfigure is a object for configuring mongo connection strings
+type DataMongoConfigure struct {
 	StatusPublisher StatusPublisher
 	TemplateLoader  TemplateLoader
 	status          *ConfigurationStatus
 	logger          log.Logger
 }
 
-func (d *DataConfigure) statusUpdate(key, message, status string) {
+// DataMysqlConfigure is a object for configuring mysql connection variables
+type DataMysqlConfigure struct {
+	StatusPublisher StatusPublisher
+	TemplateLoader  TemplateLoader
+	status          *ConfigurationStatus
+	logger          log.Logger
+}
+
+func (d *DataMongoConfigure) statusUpdate(key, message, status string) {
 	if d.status == nil {
 		d.status = &ConfigurationStatus{Started: time.Now(), Log: []string{}}
 	}
@@ -213,7 +230,7 @@ func (d *DataConfigure) statusUpdate(key, message, status string) {
 }
 
 // Configure takes an apps DeployConfig and sets of a job to create a new user and database in the mongodb data service. It also sets the expected env var FH_MONGODB_CONN_URL on the apps DeploymentConfig so it can be used to connect to the data service
-func (d *DataConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
+func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
 	esName := "data-mongo"
 	d.statusUpdate(deployment.Name, "starting configuration of data service for "+deployment.Name, configInProgress)
 	if v, ok := deployment.Labels["rhmap/name"]; ok {
@@ -305,14 +322,14 @@ func (d *DataConfigure) Configure(client Client, deployment *dc.DeploymentConfig
 			})
 		}
 	}
-	// load up our job definition and execute it
-	tpl, err := d.TemplateLoader.Load("data-job")
+
+	tpl, err := d.TemplateLoader.Load("data-mongo-job")
 	if err != nil {
 		d.statusUpdate(deployment.Name, "failed to load job template "+err.Error(), configError)
-		return nil, errors.Wrap(err, "failed to load template data-job ")
+		return nil, errors.Wrap(err, "failed to load template data-mongo-job ")
 	}
 	var buf bytes.Buffer
-	if err := tpl.ExecuteTemplate(&buf, "data-job", jobOpts); err != nil {
+	if err := tpl.ExecuteTemplate(&buf, "data-mongo-job", jobOpts); err != nil {
 		err = errors.Wrap(err, "failed to execute template: ")
 		d.statusUpdate(deployment.Name, err.Error(), configError)
 		return nil, err
@@ -357,5 +374,21 @@ func (d *DataConfigure) Configure(client Client, deployment *dc.DeploymentConfig
 		}
 	}()
 
+	return deployment, nil
+}
+
+func (d *DataMysqlConfigure) statusUpdate(key, message, status string) {
+	if d.status == nil {
+		d.status = &ConfigurationStatus{Started: time.Now(), Log: []string{}}
+	}
+	d.status.Log = append(d.status.Log, message)
+	d.status.Status = status
+	if err := d.StatusPublisher.Publish(key, *d.status); err != nil {
+		d.logger.Info("failed to publish status", err.Error())
+	}
+}
+
+// Configure the mysql connection vars here
+func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
 	return deployment, nil
 }

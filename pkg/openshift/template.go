@@ -25,10 +25,12 @@ const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456
 
 func init() {
 	PackagedTemplates["cloudapp"] = templates.CloudAppTemplate
-	PackagedTemplates["cache"] = templates.CacheTemplate
-	PackagedTemplates["data-mongo"] = templates.DataTemplate
-	PackagedTemplates["data-mongo-replica"] = templates.DataMongoReplicaTemplate
-	PackagedTemplates["data-job"] = templates.DataConfigJob
+
+	PackagedTemplates["cache-redis"] = templates.CacheRedisTemplate
+	PackagedTemplates["data-mongo"] = templates.DataMongoTemplate
+	PackagedTemplates["data-mongo-job"] = templates.DataMongoConfigJob
+	PackagedTemplates["data-mysql"] = templates.DataMySQLTemplate
+
 }
 
 func (tl *templateLoaderDecoder) Load(name string) (*template.Template, error) {

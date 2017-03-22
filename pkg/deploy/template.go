@@ -17,6 +17,10 @@ import (
 	k8api "k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/apis/batch"
 
+	"regexp"
+
+	"strings"
+
 	"github.com/feedhenry/negotiator/pkg/log"
 	roapi "github.com/openshift/origin/pkg/route/api"
 	"k8s.io/kubernetes/pkg/watch"
@@ -141,8 +145,11 @@ func (t Template) hasSecret() bool {
 }
 
 const templateCloudApp = "cloudapp"
-const templateCache = "cache"
-const templateData = "data-mongo"
+
+const templateCacheRedis = "cache-redis"
+const templateDataMongo = "data-mongo"
+const templateDataMysql = "data-mysql"
+
 
 type environmentServices []string
 
@@ -155,7 +162,7 @@ func (es environmentServices) isEnvironmentService(name string) bool {
 	return false
 }
 
-var availableEnvironmentServices = environmentServices{templateCache}
+var availableEnvironmentServices = environmentServices{templateCacheRedis}
 
 // ErrInvalid is returned when something invalid happens
 type ErrInvalid struct {
@@ -173,6 +180,31 @@ func (p Payload) Validate(template string) error {
 		if p.Repo == nil || p.Repo.Loc == "" || p.Repo.Ref == "" {
 			return ErrInvalid{message: "a repo is expected for a cloudapp"}
 		}
+	case templateDataMysql:
+		//regex to validate the values
+		regexes := map[string]string{
+			"mysql_user":     `[a-zA-Z]{3}[a-zA-Z]+`,
+			"mysql_password": `.{8}.*`,
+			"mysql_database": `[a-zA-Z]{3}[a-zA-Z]+`,
+		}
+
+		if p.Options == nil {
+			return ErrInvalid{message: "mysql options must be present and have the following keys: mysql_user, mysql_pass, mysql_database"}
+		}
+
+		problems := checkKeyValues(regexes, p.Options)
+
+		if val, ok := p.Options["storage"]; ok {
+			regex := `[0-9]+[a-zA-Z]+`
+			r, _ := regexp.Compile(regex)
+			if !r.MatchString(val.(string)) {
+				problems = append(problems, "storage option must match regex: "+regex)
+			}
+		}
+		if len(problems) > 0 {
+			return ErrInvalid{message: strings.Join(problems, "\n")}
+		}
+
 	}
 	if p.Target == nil {
 		return ErrInvalid{message: "an oscp target is required"}
@@ -184,6 +216,27 @@ func (p Payload) Validate(template string) error {
 	return nil
 }
 
+//checkKeyValues will check the dirty input against the validators provided,
+// if any validator field is missing or if it preseny but the value does not match the regex
+// it will be included in the returned slice of problems.
+// if the returned slice is empty then no issues were found
+func checkKeyValues(validators map[string]string, dirty map[string]interface{}) []string {
+	problems := []string{}
+	for field, regex := range validators {
+		if val, ok := dirty[field]; ok {
+			r, _ := regexp.Compile(regex)
+			if !r.MatchString(val.(string)) {
+				problems = append(problems, field+" must match regex: "+regex)
+			}
+		} else {
+			problems = append(problems, "missing required value: "+field)
+		}
+	}
+	return problems
+}
+
+// ServiceConfigFactory creates service configs
+// todo: improve this comment
 type ServiceConfigFactory interface {
 	Factory(serviceName string) Configurer
 	Publisher(publisher StatusPublisher)
@@ -200,7 +253,7 @@ func New(tl TemplateLoader, td TemplateDecoder, logger log.Logger, configuration
 }
 
 // Template deploys a set of objects based on an OSCP Template Object. Templates are located in resources/templates
-func (c Controller) Template(client Client, template, nameSpace string, deploy *Payload) (*Dispatched, error) {
+func (c Controller) Template(client Client, template, nameSpace string, payload *Payload) (*Dispatched, error) {
 	var (
 		buf        bytes.Buffer
 		dispatched *Dispatched
@@ -209,11 +262,11 @@ func (c Controller) Template(client Client, template, nameSpace string, deploy *
 	instansiateBuild := func() (*Dispatched, error) {
 
 		if template != templateCloudApp {
-			dispatched.WatchURL = client.DeployLogURL(nameSpace, deploy.ServiceName)
+			dispatched.WatchURL = client.DeployLogURL(nameSpace, payload.ServiceName)
 			return dispatched, nil
 		}
 
-		build, err := client.InstantiateBuild(nameSpace, deploy.ServiceName)
+		build, err := client.InstantiateBuild(nameSpace, payload.ServiceName)
 		if err != nil {
 			return nil, err
 		}
@@ -221,30 +274,30 @@ func (c Controller) Template(client Client, template, nameSpace string, deploy *
 			return nil, errors.New("no build returned from call to OSCP. Unable to continue")
 		}
 		dispatched.WatchURL = client.BuildConfigLogURL(nameSpace, build.Name)
-		dispatched.BuildURL = client.BuildURL(nameSpace, build.Name, deploy.CloudAppGUID)
+		dispatched.BuildURL = client.BuildURL(nameSpace, build.Name, payload.CloudAppGUID)
 		return dispatched, nil
 	}
 
 	if nameSpace == "" {
 		return nil, errors.New("an empty namespace cannot be provided")
 	}
-	if err := deploy.Validate(template); err != nil {
+	if err := payload.Validate(template); err != nil {
 		return nil, err
 	}
 	tpl, err := c.templateLoader.Load(template)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to load template "+template+": ")
 	}
-	if err := tpl.ExecuteTemplate(&buf, template, deploy); err != nil {
+	if err := tpl.ExecuteTemplate(&buf, template, payload); err != nil {
 		return nil, errors.Wrap(err, "failed to execute template: ")
 	}
 	osTemplate, err := c.TemplateDecoder.Decode(buf.Bytes())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode into a os template: ")
 	}
-	searchCrit := map[string]string{"rhmap/name": deploy.ServiceName}
-	if deploy.CloudAppGUID != "" {
-		searchCrit = map[string]string{"rhmap/guid": deploy.CloudAppGUID}
+	searchCrit := map[string]string{"rhmap/name": payload.ServiceName}
+	if payload.CloudAppGUID != "" {
+		searchCrit = map[string]string{"rhmap/guid": payload.CloudAppGUID}
 	}
 	dcs, err := client.FindDeploymentConfigsByLabel(nameSpace, searchCrit)
 	if err != nil {
@@ -256,14 +309,14 @@ func (c Controller) Template(client Client, template, nameSpace string, deploy *
 	}
 	//check if already deployed
 	if len(dcs) > 0 || (nil != bc && len(dcs) > 0) {
-		dispatched, err = c.update(client, &dcs[0], bc, osTemplate, nameSpace, deploy)
+		dispatched, err = c.update(client, &dcs[0], bc, osTemplate, nameSpace, payload)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error updating deploy: ")
 		}
 		c.ConfigurationController.Configure(client, dispatched.DeploymentName, nameSpace)
 		return instansiateBuild()
 	}
-	dispatched, err = c.create(client, osTemplate, nameSpace, deploy)
+	dispatched, err = c.create(client, osTemplate, nameSpace, payload)
 	if err != nil {
 		return nil, err
 	}

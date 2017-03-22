@@ -69,7 +69,7 @@ func TestDeploy(t *testing.T) {
 				},
 			},
 			TestName:  "test deploy cache",
-			Template:  "cache",
+			Template:  "cache-redis",
 			NameSpace: "test",
 			Payload: &deploy.Payload{
 				Target: &deploy.Target{
@@ -142,7 +142,7 @@ func TestDeploy(t *testing.T) {
 		{
 			TestName:    "test invalid template payload",
 			ExpectError: true,
-			Template:    "cache",
+			Template:    "cache-redis",
 			NameSpace:   "test",
 			Payload:     &deploy.Payload{},
 		},
@@ -204,7 +204,7 @@ func TestDeploy(t *testing.T) {
 				"CreateServiceInNamespace":      1,
 				"CreatePersistentVolumeClaim":   1,
 			},
-			Template:  "data",
+			Template:  "data-mongo",
 			NameSpace: "test",
 			Payload: &deploy.Payload{
 				Target: &deploy.Target{
@@ -249,7 +249,7 @@ func TestDeploy(t *testing.T) {
 					return nil
 				},
 			},
-			Template:  "data",
+			Template:  "data-mongo",
 			NameSpace: "test",
 			Payload: &deploy.Payload{
 				Target: &deploy.Target{
