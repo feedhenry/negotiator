@@ -8,11 +8,11 @@ var DataConfigJob = `
   "metadata": {
     "name": "{{index . "name"}}-dataconfig-job",
 	"labels": {
-		"rhmap/name":"dataconfig"
+		"rhmap/name":"data-mongo"
 	}
   },
   "spec": {
-	"activeDeadlineSeconds": 20,  
+	"activeDeadlineSeconds": 120,  
     "template": {
       "metadata": {
         "name": "{{index . "name"}}-dataconfig-job"

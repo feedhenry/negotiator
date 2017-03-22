@@ -38,6 +38,22 @@ type PassClient struct {
 	Error   map[string]error
 }
 
+func (pc PassClient) CreatePod(ns string, p *api.Pod, ns string) (*api.Pod, error) {
+	pc.Called["CreateJobToWatch"]++
+	if e, ok := pc.Error["CreateJobToWatch"]; ok {
+		return nil, e
+	}
+	ret := p
+	if pc.Returns["CreateJobToWatch"] != nil {
+		ret = pc.Returns["CreateJobToWatch"].(*api.Pod)
+	}
+	if assert, ok := pc.Asserts["CreateJobToWatch"]; ok {
+		return ret, assert(ret)
+	}
+	return ret, nil
+
+}
+
 func (pc PassClient) CreateJobToWatch(j *batch.Job, ns string) (watch.Interface, error) {
 	pc.Called["CreateJobToWatch"]++
 	if e, ok := pc.Error["CreateJobToWatch"]; ok {
@@ -86,6 +102,21 @@ func (pc PassClient) CreatePersistentVolumeClaim(namespace string, claim *api.Pe
 		ret = pc.Returns["CreatePersistentVolumeClaim"].(*api.PersistentVolumeClaim)
 	}
 	if assert, ok := pc.Asserts["CreatePersistentVolumeClaim"]; ok {
+		return ret, assert(ret)
+	}
+	return ret, nil
+}
+
+func (pc PassClient) FindJobByName(ns, name string) (*batch.Job, error) {
+	pc.Called["FindJobByName"]++
+	if e, ok := pc.Error["FindJobByName"]; ok {
+		return nil, e
+	}
+	var ret *batch.Job
+	if pc.Returns["FindJobByName"] != nil {
+		ret = pc.Returns["FindJobByName"].(*batch.Job)
+	}
+	if assert, ok := pc.Asserts["FindJobByName"]; ok {
 		return ret, assert(ret)
 	}
 	return ret, nil

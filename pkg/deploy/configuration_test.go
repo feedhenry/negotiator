@@ -11,6 +11,7 @@ import (
 	"github.com/feedhenry/negotiator/pkg/openshift"
 	dcapi "github.com/openshift/origin/pkg/deploy/api"
 	"k8s.io/kubernetes/pkg/api"
+	"k8s.io/kubernetes/pkg/apis/batch"
 )
 
 type mockStatusPublisher struct {
@@ -157,6 +158,7 @@ func TestDataConfigurationJob(t *testing.T) {
 		Assert      func(d *dcapi.DeploymentConfig) error
 		UpdateDC    func(d *dcapi.DeploymentConfig) *dcapi.DeploymentConfig
 		UpdateSVC   func(d *api.Service) *api.Service
+		UpdateJob   func(j *batch.Job) *batch.Job
 		Calls       map[string]int
 	}{
 		{
@@ -165,6 +167,9 @@ func TestDataConfigurationJob(t *testing.T) {
 			},
 			UpdateSVC: func(s *api.Service) *api.Service {
 				return s
+			},
+			UpdateJob: func(j *batch.Job) *batch.Job {
+				return nil
 			},
 			TestName:    "test setup data happy",
 			ExpectError: false,
@@ -187,6 +192,7 @@ func TestDataConfigurationJob(t *testing.T) {
 			Calls: map[string]int{
 				"FindDeploymentConfigsByLabel": 1,
 				"FindServiceByLabel":           1,
+				"FindJobByName":                1,
 			},
 		},
 		{
@@ -201,8 +207,11 @@ func TestDataConfigurationJob(t *testing.T) {
 				}
 				return nil
 			},
+			UpdateJob: func(j *batch.Job) *batch.Job {
+				return nil
+			},
 			UpdateDC: func(d *dcapi.DeploymentConfig) *dcapi.DeploymentConfig {
-				d.Labels = map[string]string{"rhmap/name": "data"}
+				d.Labels = map[string]string{"rhmap/name": "data-mongo"}
 				d.Spec.Template.Spec.Containers[0].Env = []api.EnvVar{{
 					Name:  "MONGODB_REPLICA_NAME",
 					Value: "",
@@ -218,11 +227,15 @@ func TestDataConfigurationJob(t *testing.T) {
 			Calls: map[string]int{
 				"FindDeploymentConfigsByLabel": 0,
 				"FindServiceByLabel":           0,
+				"FindJobByName":                0,
 			},
 		},
 		{
 			TestName:    "test setup data does not execute when missing service",
 			ExpectError: true,
+			UpdateJob: func(j *batch.Job) *batch.Job {
+				return nil
+			},
 			Assert: func(d *dcapi.DeploymentConfig) error {
 				if d != nil {
 					return fmt.Errorf("did not expect a DeploymentConfig")
@@ -238,6 +251,31 @@ func TestDataConfigurationJob(t *testing.T) {
 			Calls: map[string]int{
 				"FindDeploymentConfigsByLabel": 1,
 				"FindServiceByLabel":           0,
+				"FindJobByName":                1,
+			},
+		},
+		{
+			TestName:    "test setup data does not execute when job already exists",
+			ExpectError: false,
+			UpdateJob: func(j *batch.Job) *batch.Job {
+				return j
+			},
+			Assert: func(d *dcapi.DeploymentConfig) error {
+				if d == nil {
+					return fmt.Errorf("expected to recieve a DeploymentConfig")
+				}
+				return nil
+			},
+			UpdateDC: func(d *dcapi.DeploymentConfig) *dcapi.DeploymentConfig {
+				return d
+			},
+			UpdateSVC: func(s *api.Service) *api.Service {
+				return s
+			},
+			Calls: map[string]int{
+				"FindDeploymentConfigsByLabel": 0,
+				"FindServiceByLabel":           0,
+				"FindJobByName":                1,
 			},
 		},
 		{
@@ -255,9 +293,13 @@ func TestDataConfigurationJob(t *testing.T) {
 			UpdateSVC: func(s *api.Service) *api.Service {
 				return nil
 			},
+			UpdateJob: func(j *batch.Job) *batch.Job {
+				return nil
+			},
 			Calls: map[string]int{
 				"FindDeploymentConfigsByLabel": 1,
 				"FindServiceByLabel":           1,
+				"FindJobByName":                1,
 			},
 		},
 	}
@@ -289,6 +331,7 @@ func TestDataConfigurationJob(t *testing.T) {
 					},
 				},
 			}
+			job := tc.UpdateJob(&batch.Job{})
 			client := mock.NewPassClient()
 			dep := tc.UpdateDC(&depConfig[0])
 			var depList = []dcapi.DeploymentConfig{}
@@ -303,6 +346,7 @@ func TestDataConfigurationJob(t *testing.T) {
 
 			client.Returns["FindDeploymentConfigsByLabel"] = depList
 			client.Returns["FindServiceByLabel"] = svcList
+			client.Returns["FindJobByName"] = job
 			// run our configure and test the result
 			deployment, err := dataConfig.Configure(client, &depConfig[0], "test")
 			if tc.ExpectError && err == nil {
@@ -311,13 +355,13 @@ func TestDataConfigurationJob(t *testing.T) {
 			if !tc.ExpectError && err != nil {
 				t.Fatalf(" did not expect an error but got %s %+v", err.Error(), err)
 			}
-			if err := tc.Assert(deployment); err != nil {
-				t.Fatalf("assert error occurred %s ", err.Error())
-			}
 			for f, n := range tc.Calls {
 				if n != client.CalledTimes(f) {
 					t.Errorf("Expected %s to be called %d times", f, n)
 				}
+			}
+			if err := tc.Assert(deployment); err != nil {
+				t.Fatalf("assert error occurred %s ", err.Error())
 			}
 		})
 	}

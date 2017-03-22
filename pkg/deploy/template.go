@@ -45,12 +45,14 @@ type Client interface {
 	CreateSecretInNamespace(namespace string, s *k8api.Secret) (*k8api.Secret, error)
 	CreatePersistentVolumeClaim(namespace string, claim *k8api.PersistentVolumeClaim) (*k8api.PersistentVolumeClaim, error)
 	CreateJobToWatch(j *batch.Job, ns string) (watch.Interface, error)
+	CreatePod(ns string, p *k8api.Pod) (*k8api.Pod, error)
 	UpdateBuildConfigInNamespace(namespace string, b *bc.BuildConfig) (*bc.BuildConfig, error)
 	UpdateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig) (*dc.DeploymentConfig, error)
 	UpdateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route, error)
 	InstantiateBuild(ns, buildName string) (*bc.Build, error)
 	FindDeploymentConfigsByLabel(ns string, searchLabels map[string]string) ([]dc.DeploymentConfig, error)
 	FindServiceByLabel(ns string, searchLabels map[string]string) ([]k8api.Service, error)
+	FindJobByName(ns, name string) (*batch.Job, error)
 	FindBuildConfigByLabel(ns string, searchLabels map[string]string) (*bc.BuildConfig, error)
 	GetDeploymentConfigByName(ns, deploymentName string) (*dc.DeploymentConfig, error)
 	DeployLogURL(ns, dc string) string
@@ -140,7 +142,7 @@ func (t Template) hasSecret() bool {
 
 const templateCloudApp = "cloudapp"
 const templateCache = "cache"
-const templateData = "data"
+const templateData = "data-mongo"
 
 type environmentServices []string
 
@@ -309,6 +311,10 @@ func (c Controller) create(client Client, template *Template, nameSpace string, 
 			}
 		case *k8api.PersistentVolumeClaim:
 			if _, err := client.CreatePersistentVolumeClaim(nameSpace, ob.(*k8api.PersistentVolumeClaim)); err != nil {
+				return nil, err
+			}
+		case *k8api.Pod:
+			if _, err := client.CreatePod(nameSpace, ob.(*k8api.Pod)); err != nil {
 				return nil, err
 			}
 		}

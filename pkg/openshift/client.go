@@ -18,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 	"k8s.io/kubernetes/pkg/api"
+	k8error "k8s.io/kubernetes/pkg/api/errors"
 	"k8s.io/kubernetes/pkg/api/unversioned"
 	"k8s.io/kubernetes/pkg/api/v1"
 	"k8s.io/kubernetes/pkg/apis/batch"
@@ -128,6 +129,26 @@ func (c Client) FindServiceByLabel(ns string, searchLabels map[string]string) ([
 		return nil, errors.Wrap(err, "failed to list services for labels ")
 	}
 	return svc.Items, nil
+}
+
+// FindJobByName return nil if not found or the Job object
+func (c Client) FindJobByName(ns, name string) (*batch.Job, error) {
+	j, err := c.k8.BatchClient.Jobs(ns).Get(name)
+	if err != nil && k8error.IsNotFound(err) {
+		return nil, nil
+	} else if err != nil {
+		return nil, errors.Wrap(err, "failed to FindJobByName")
+	}
+	return j, nil
+}
+
+// CreatePod creates a pod object and returns it
+func (c Client) CreatePod(ns string, p *api.Pod) (*api.Pod, error) {
+	p, err := c.k8.Pods(ns).Create(p)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to CreatePod")
+	}
+	return p, nil
 }
 
 // CreateJobToWatch creates a job and returns a watch on that Job
