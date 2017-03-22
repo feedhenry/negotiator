@@ -38,7 +38,7 @@ type PassClient struct {
 	Error   map[string]error
 }
 
-func (pc PassClient) CreatePod(ns string, p *api.Pod, ns string) (*api.Pod, error) {
+func (pc PassClient) CreatePod(ns string, p *api.Pod) (*api.Pod, error) {
 	pc.Called["CreateJobToWatch"]++
 	if e, ok := pc.Error["CreateJobToWatch"]; ok {
 		return nil, e
