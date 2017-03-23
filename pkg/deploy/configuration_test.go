@@ -151,8 +151,80 @@ func TestConfiguringCacheJob(t *testing.T) {
 func TestDataConfigurationJob(t *testing.T) {
 	tl := openshift.NewTemplateLoaderDecoder("../openshift/templates/")
 	msp := &mockStatusPublisher{}
-	dataMongoConfig := deploy.DataMongoConfigure{StatusPublisher: msp, TemplateLoader: tl}
-	dataMySQLConfig := deploy.DataMysqlConfigure{StatusPublisher: msp, TemplateLoader: tl}
+	getDataMongoConfig := func() deploy.Configurer {
+		return &deploy.DataMongoConfigure{StatusPublisher: msp, TemplateLoader: tl}
+	}
+	getDataMySQLConfig := func() deploy.Configurer {
+		return &deploy.DataMysqlConfigure{StatusPublisher: msp, TemplateLoader: tl}
+	}
+
+	getMongodc := func() []dcapi.DeploymentConfig {
+		return []dcapi.DeploymentConfig{
+			{ObjectMeta: api.ObjectMeta{Name: "data-mongo"}, Spec: dcapi.DeploymentConfigSpec{
+				Template: &api.PodTemplateSpec{
+					Spec: api.PodSpec{
+						Containers: []api.Container{{
+							Name: "",
+							Env: []api.EnvVar{{
+								Name:  "MONGODB_REPLICA_NAME",
+								Value: "",
+							}, {
+								Name:  "MONGODB_ADMIN_PASSWORD",
+								Value: "password",
+							}},
+						}},
+					},
+				},
+			}},
+		}
+	}
+	getMongosc := func() api.Service {
+		return api.Service{
+			ObjectMeta: api.ObjectMeta{
+				Labels: map[string]string{
+					"rhmap/name": "data-mongo",
+				},
+			},
+		}
+	}
+	//setup the MySQL DeploymentConfig fresh for each test
+	getMysqldc := func() []dcapi.DeploymentConfig {
+		return []dcapi.DeploymentConfig{
+			{
+				ObjectMeta: api.ObjectMeta{
+					Name: "data-mysql",
+					Labels: map[string]string{
+						"rhmap/guid": "asdasdasdassdasdasdsadasdadasdasdasdasdsda",
+					},
+				},
+				Spec: dcapi.DeploymentConfigSpec{
+					Template: &api.PodTemplateSpec{
+						Spec: api.PodSpec{
+							Containers: []api.Container{{
+								Name: "",
+								Env: []api.EnvVar{
+									{
+										Name:  "MYSQL_ROOT_PASSWORD",
+										Value: "dfgdfgdf",
+									},
+								},
+							}},
+						},
+					},
+				}},
+		}
+	}
+	getMysqlsc := func() api.Service {
+		return api.Service{
+			ObjectMeta: api.ObjectMeta{
+				Labels: map[string]string{
+					"rhmap/name": "data-mysql",
+					"rhmap/guid": "asdasdasdassdasdasdsadasdadasdasdasdasdsda",
+				},
+			},
+		}
+	}
+
 	cases := []struct {
 		TestName    string
 		ExpectError bool
@@ -160,8 +232,10 @@ func TestDataConfigurationJob(t *testing.T) {
 		UpdateDC    func(d *dcapi.DeploymentConfig) *dcapi.DeploymentConfig
 		UpdateSVC   func(d *api.Service) *api.Service
 		UpdateJob   func(j *batch.Job) *batch.Job
+		GetDC       func() []dcapi.DeploymentConfig
+		GetSC       func() api.Service
+		GetConfig   func() deploy.Configurer
 		Calls       map[string]int
-		Config      deploy.Configurer
 	}{
 		{
 			UpdateDC: func(d *dcapi.DeploymentConfig) *dcapi.DeploymentConfig {
@@ -174,7 +248,9 @@ func TestDataConfigurationJob(t *testing.T) {
 				return nil
 			},
 			TestName:    "test setup data happy",
-			Config:      &dataMongoConfig,
+			GetConfig:   getDataMongoConfig,
+			GetDC:       getMongodc,
+			GetSC:       getMongosc,
 			ExpectError: false,
 			Assert: func(d *dcapi.DeploymentConfig) error {
 				container := d.Spec.Template.Spec.Containers[0]
@@ -208,8 +284,10 @@ func TestDataConfigurationJob(t *testing.T) {
 			UpdateJob: func(j *batch.Job) *batch.Job {
 				return nil
 			},
-			TestName:    "test setup data happy",
-			Config:      &dataMySQLConfig,
+			TestName:    "test setup data mysql happy",
+			GetConfig:   getDataMySQLConfig,
+			GetDC:       getMysqldc,
+			GetSC:       getMysqlsc,
 			ExpectError: false,
 			Assert: func(d *dcapi.DeploymentConfig) error {
 				container := d.Spec.Template.Spec.Containers[0]
@@ -244,7 +322,9 @@ func TestDataConfigurationJob(t *testing.T) {
 		},
 		{
 			TestName:    "test setup data does not execute for data deployments",
-			Config:      &dataMongoConfig,
+			GetConfig:   getDataMongoConfig,
+			GetDC:       getMongodc,
+			GetSC:       getMongosc,
 			ExpectError: false,
 			Assert: func(d *dcapi.DeploymentConfig) error {
 				container := d.Spec.Template.Spec.Containers[0]
@@ -280,7 +360,9 @@ func TestDataConfigurationJob(t *testing.T) {
 		},
 		{
 			TestName:    "test setup data does not execute when missing service",
-			Config:      &dataMongoConfig,
+			GetConfig:   getDataMongoConfig,
+			GetDC:       getMongodc,
+			GetSC:       getMongosc,
 			ExpectError: true,
 			UpdateJob: func(j *batch.Job) *batch.Job {
 				return nil
@@ -305,7 +387,9 @@ func TestDataConfigurationJob(t *testing.T) {
 		},
 		{
 			TestName:    "test setup data does not execute when job already exists",
-			Config:      &dataMongoConfig,
+			GetConfig:   getDataMongoConfig,
+			GetDC:       getMongodc,
+			GetSC:       getMongosc,
 			ExpectError: false,
 			UpdateJob: func(j *batch.Job) *batch.Job {
 				return j
@@ -330,7 +414,9 @@ func TestDataConfigurationJob(t *testing.T) {
 		},
 		{
 			TestName:    "test setup data does not execute when missing kub svc def",
-			Config:      &dataMongoConfig,
+			GetConfig:   getDataMongoConfig,
+			GetDC:       getMongodc,
+			GetSC:       getMongosc,
 			ExpectError: true,
 			Assert: func(d *dcapi.DeploymentConfig) error {
 				if d != nil {
@@ -356,32 +442,9 @@ func TestDataConfigurationJob(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.TestName, func(t *testing.T) {
-			//setup the DeploymentConfig fresh for each test
-			depConfig := []dcapi.DeploymentConfig{
-				{ObjectMeta: api.ObjectMeta{Name: "data-mongo"}, Spec: dcapi.DeploymentConfigSpec{
-					Template: &api.PodTemplateSpec{
-						Spec: api.PodSpec{
-							Containers: []api.Container{{
-								Name: "",
-								Env: []api.EnvVar{{
-									Name:  "MONGODB_REPLICA_NAME",
-									Value: "",
-								}, {
-									Name:  "MONGODB_ADMIN_PASSWORD",
-									Value: "password",
-								}},
-							}},
-						},
-					},
-				}},
-			}
-			service := api.Service{
-				ObjectMeta: api.ObjectMeta{
-					Labels: map[string]string{
-						"rhmap/name": "data",
-					},
-				},
-			}
+			depConfig := tc.GetDC()
+			service := tc.GetSC()
+			dataConfig := tc.GetConfig()
 			job := tc.UpdateJob(&batch.Job{})
 			client := mock.NewPassClient()
 			dep := tc.UpdateDC(&depConfig[0])
@@ -399,7 +462,7 @@ func TestDataConfigurationJob(t *testing.T) {
 			client.Returns["FindServiceByLabel"] = svcList
 			client.Returns["FindJobByName"] = job
 			// run our configure and test the result
-			deployment, err := tc.Config.Configure(client, &depConfig[0], "test")
+			deployment, err := dataConfig.Configure(client, &depConfig[0], "test")
 			if tc.ExpectError && err == nil {
 				t.Fatalf(" expected an error but got none")
 			}
@@ -408,7 +471,7 @@ func TestDataConfigurationJob(t *testing.T) {
 			}
 			for f, n := range tc.Calls {
 				if n != client.CalledTimes(f) {
-					t.Errorf("Expected %s to be called %d times", f, n)
+					t.Errorf("Expected %s to be called %d times, it was called %d times", f, n, client.CalledTimes(f))
 				}
 			}
 			if err := tc.Assert(deployment); err != nil {

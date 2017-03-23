@@ -98,9 +98,10 @@ func NewEnvironmentServiceConfigController(configFactory ServiceConfigFactory, l
 		publisher = LogStatusPublisher{Logger: log}
 	}
 	return &EnvironmentServiceConfigController{
-		StatusPublisher: publisher,
-		logger:          log,
-		templateLoader:  tl,
+		ConfigurationFactory: configFactory,
+		StatusPublisher:      publisher,
+		logger:               log,
+		templateLoader:       tl,
 	}
 }
 
@@ -396,7 +397,6 @@ func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentC
 			return deployment, nil
 		}
 	}
-
 	dataDc, err := client.FindDeploymentConfigsByLabel(namespace, map[string]string{"rhmap/name": templateDataMysql})
 	if err != nil {
 		d.statusUpdate(deployment.Name, "failed to find data DeploymentConfig. Cannot continue "+err.Error(), configError)
@@ -406,6 +406,16 @@ func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentC
 		err := errors.New("no data DeploymentConfig exists. Cannot continue")
 		d.statusUpdate(deployment.Name, err.Error(), configError)
 		return nil, err
+	}
+	// look for the Job if it already exists no need to run it again
+	existingJob, err := client.FindJobByName(namespace, deployment.Name+"-dataconfig-job")
+	if err != nil {
+		d.statusUpdate(deployment.Name, "error finding existing Job "+err.Error(), "error")
+		return deployment, nil
+	}
+	if existingJob != nil {
+		d.statusUpdate(deployment.Name, "configuration job "+deployment.Name+"-dataconfig-job already exists. No need to run again ", "complete")
+		return deployment, nil
 	}
 	dataService, err := client.FindServiceByLabel(namespace, map[string]string{"rhmap/name": templateDataMysql})
 	if err != nil {
