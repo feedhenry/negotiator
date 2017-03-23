@@ -446,7 +446,7 @@ func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentC
 	}
 
 	jobName := "data-mysql-job"
-	jobOpts["name"] = jobName
+	jobOpts["name"] = deployment.Name
 	jobOpts["dbhost"] = dataService[0].GetName()
 
 	jobOpts["admin-username"] = "root"
@@ -454,6 +454,8 @@ func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentC
 
 	if v, ok := deployment.Labels["rhmap/guid"]; ok {
 		jobOpts["user-database"] = v
+	} else {
+		return nil, errors.New("Could not find rhmap/guid for deployment: " + deployment.Name)
 	}
 	jobOpts["user-password"] = genPass(16)
 	jobOpts["user-username"] = jobOpts["user-database"].(string)[:16]
