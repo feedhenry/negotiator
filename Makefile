@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-VERSION := v0.0.5
+VERSION := v0.0.6
 NAME := negotiator
 
 .PHONY: all
