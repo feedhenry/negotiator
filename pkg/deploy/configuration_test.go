@@ -307,7 +307,7 @@ func TestDataConfigurationJob(t *testing.T) {
 		t.Run(tc.TestName, func(t *testing.T) {
 			//setup the DeploymentConfig fresh for each test
 			depConfig := []dcapi.DeploymentConfig{
-				{ObjectMeta: api.ObjectMeta{Name: "data"}, Spec: dcapi.DeploymentConfigSpec{
+				{ObjectMeta: api.ObjectMeta{Name: "data-mongo"}, Spec: dcapi.DeploymentConfigSpec{
 					Template: &api.PodTemplateSpec{
 						Spec: api.PodSpec{
 							Containers: []api.Container{{

@@ -98,10 +98,9 @@ func NewEnvironmentServiceConfigController(configFactory ServiceConfigFactory, l
 		publisher = LogStatusPublisher{Logger: log}
 	}
 	return &EnvironmentServiceConfigController{
-		StatusPublisher:      publisher,
-		ConfigurationFactory: configFactory,
-		logger:               log,
-		templateLoader:       tl,
+		StatusPublisher: publisher,
+		logger:          log,
+		templateLoader:  tl,
 	}
 }
 
@@ -235,7 +234,7 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 	d.statusUpdate(deployment.Name, "starting configuration of data service for "+deployment.Name, configInProgress)
 	if v, ok := deployment.Labels["rhmap/name"]; ok {
 		if v == esName {
-			d.statusUpdate(deployment.Name, "no need to configure data DeploymentConfig ", configComplete)
+			d.statusUpdate(deployment.Name, "no need to configure data-mongo DeploymentConfig ", configComplete)
 			return deployment, nil
 		}
 	}
@@ -366,7 +365,7 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 				}
 				d.statusUpdate(deployment.Name, fmt.Sprintf("job status succeeded %d failed %d", j.Status.Succeeded, j.Status.Failed), configInProgress)
 			case watch.Error:
-				d.statusUpdate(deployment.Name, " data configuration job error ", configError)
+				d.statusUpdate(deployment.Name, " data-mongo configuration job error ", configError)
 				//TODO maybe pull back the log from the pod here? also remove the job in this condition so it can be retried
 				w.Stop()
 			}
@@ -390,5 +389,137 @@ func (d *DataMysqlConfigure) statusUpdate(key, message, status string) {
 
 // Configure the mysql connection vars here
 func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
+	d.statusUpdate(deployment.Name, "starting configuration of data service for "+deployment.Name, configInProgress)
+	if v, ok := deployment.Labels["rhmap/name"]; ok {
+		if v == templateDataMysql {
+			d.statusUpdate(deployment.Name, "no need to configure data-mysql DeploymentConfig ", configComplete)
+			return deployment, nil
+		}
+	}
+
+	dataDc, err := client.FindDeploymentConfigsByLabel(namespace, map[string]string{"rhmap/name": templateDataMysql})
+	if err != nil {
+		d.statusUpdate(deployment.Name, "failed to find data DeploymentConfig. Cannot continue "+err.Error(), configError)
+		return nil, err
+	}
+	if len(dataDc) == 0 {
+		err := errors.New("no data DeploymentConfig exists. Cannot continue")
+		d.statusUpdate(deployment.Name, err.Error(), configError)
+		return nil, err
+	}
+	dataService, err := client.FindServiceByLabel(namespace, map[string]string{"rhmap/name": templateDataMysql})
+	if err != nil {
+		d.statusUpdate(deployment.Name, "failed to find data service cannot continue "+err.Error(), configError)
+		return nil, err
+	}
+	if len(dataService) == 0 {
+		err := errors.New("no service for data found. Cannot continue")
+		d.statusUpdate(deployment.Name, err.Error(), configError)
+		return nil, err
+	}
+	jobOpts := map[string]interface{}{}
+
+	containerEnv := dataDc[0].Spec.Template.Spec.Containers[0].Env
+
+	found := false
+	for _, e := range containerEnv {
+		if e.Name == "MYSQL_ROOT_PASSWORD" {
+			jobOpts["admin-password"] = e.Value
+			found = true
+			break
+		}
+	}
+	if !found {
+		err := errors.New("expected to find an env var: MYSQL_ROOT_PASSWORD but it was not present")
+		d.statusUpdate(deployment.Name, err.Error(), configError)
+		return nil, err
+	}
+
+	jobName := "data-mysql-job"
+	jobOpts["name"] = jobName
+	jobOpts["dbhost"] = dataService[0].GetName()
+
+	jobOpts["admin-username"] = "root"
+	jobOpts["admin-database"] = "mysql"
+
+	if v, ok := deployment.Labels["rhmap/guid"]; ok {
+		jobOpts["user-database"] = v
+	}
+	jobOpts["user-password"] = genPass(16)
+	jobOpts["user-username"] = jobOpts["user-database"].(string)[:16]
+
+	for ci := range deployment.Spec.Template.Spec.Containers {
+		env := deployment.Spec.Template.Spec.Containers[ci].Env
+		envFromOpts := map[string]string{
+			"MYSQL_USER":     "user-username",
+			"MYSQL_PASSWORD": "user-password",
+			"MYSQL_DATABASE": "user-database",
+		}
+		for envName, optsName := range envFromOpts {
+			found := false
+			for ei, e := range env {
+				if e.Name == envName {
+					deployment.Spec.Template.Spec.Containers[ci].Env[ei].Value = jobOpts[optsName].(string)
+					found = true
+					break
+				}
+			}
+			if !found {
+				deployment.Spec.Template.Spec.Containers[ci].Env = append(deployment.Spec.Template.Spec.Containers[ci].Env, k8api.EnvVar{
+					Name:  envName,
+					Value: jobOpts[optsName].(string),
+				})
+			}
+		}
+
+	}
+	tpl, err := d.TemplateLoader.Load(jobName)
+	if err != nil {
+		d.statusUpdate(deployment.Name, "failed to load job template "+err.Error(), configError)
+		return nil, errors.Wrap(err, "failed to load template "+jobName)
+	}
+	var buf bytes.Buffer
+	if err := tpl.ExecuteTemplate(&buf, jobName, jobOpts); err != nil {
+		err = errors.Wrap(err, "failed to execute template: ")
+		d.statusUpdate(deployment.Name, err.Error(), configError)
+		return nil, err
+	}
+	j := &batch.Job{}
+	if err := runtime.DecodeInto(k8api.Codecs.UniversalDecoder(), buf.Bytes(), j); err != nil {
+		err = errors.Wrap(err, "failed to Decode job")
+		d.statusUpdate(deployment.Name, err.Error(), "error")
+		return nil, err
+	}
+	//set off job and watch it till complete
+	go func() {
+		w, err := client.CreateJobToWatch(j, namespace)
+		if err != nil {
+			d.statusUpdate(deployment.Name, "failed to CreateJobToWatch "+err.Error(), configError)
+			return
+		}
+		result := w.ResultChan()
+		for ws := range result {
+			switch ws.Type {
+			case watch.Added, watch.Modified:
+				j := ws.Object.(*batch.Job)
+				if j.Status.Succeeded >= 1 {
+					d.statusUpdate(deployment.Name, "configuration job succeeded ", configComplete)
+					w.Stop()
+				}
+				d.statusUpdate(deployment.Name, fmt.Sprintf("job status succeeded %d failed %d", j.Status.Succeeded, j.Status.Failed), configInProgress)
+				for _, condition := range j.Status.Conditions {
+					if condition.Reason == "DeadlineExceeded" {
+						d.statusUpdate(deployment.Name, "configuration job failed to configure database in time "+condition.Message, configError)
+						w.Stop()
+					}
+				}
+			case watch.Error:
+				d.statusUpdate(deployment.Name, " data configuration job error ", configError)
+				w.Stop()
+			}
+
+		}
+	}()
+
 	return deployment, nil
 }
