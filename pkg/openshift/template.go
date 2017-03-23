@@ -25,25 +25,33 @@ const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456
 
 func init() {
 	PackagedTemplates["cloudapp"] = templates.CloudAppTemplate
+
 	PackagedTemplates["cache-redis"] = templates.CacheRedisTemplate
 	PackagedTemplates["data-mongo"] = templates.DataMongoTemplate
+	PackagedTemplates["data-mongo-replica"] = templates.DataMongoReplicaTemplate
 	PackagedTemplates["data-mongo-job"] = templates.DataMongoConfigJob
 	PackagedTemplates["data-mysql"] = templates.DataMySQLTemplate
+
 }
 
 func (tl *templateLoaderDecoder) Load(name string) (*template.Template, error) {
 
 	var t = template.New("")
+	var genPass = func() string {
+		b := make([]byte, 16)
+		for i := range b {
+			b[i] = letterBytes[rand.Intn(len(letterBytes))]
+		}
+		return string(b)
+	}
+	var generatedPass = genPass() // a single generated password per template load
 	t.Funcs(template.FuncMap{
 		"isEnd": func(n, total int) bool {
 			return n == total-1
 		},
-		"genPass": func() string {
-			b := make([]byte, 16)
-			for i := range b {
-				b[i] = letterBytes[rand.Intn(len(letterBytes))]
-			}
-			return string(b)
+		"genPass": genPass,
+		"generatedPass": func()string{
+			return generatedPass
 		},
 		"isset": func(vals map[string]interface{}, key string) bool {
 			if nil == vals {

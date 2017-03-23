@@ -231,9 +231,10 @@ func (d *DataMongoConfigure) statusUpdate(key, message, status string) {
 
 // Configure takes an apps DeployConfig and sets of a job to create a new user and database in the mongodb data service. It also sets the expected env var FH_MONGODB_CONN_URL on the apps DeploymentConfig so it can be used to connect to the data service
 func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
+	esName := "data-mongo"
 	d.statusUpdate(deployment.Name, "starting configuration of data service for "+deployment.Name, configInProgress)
 	if v, ok := deployment.Labels["rhmap/name"]; ok {
-		if v == "data" {
+		if v == esName {
 			d.statusUpdate(deployment.Name, "no need to configure data DeploymentConfig ", configComplete)
 			return deployment, nil
 		}
@@ -245,7 +246,17 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 		}
 		return url
 	}
-	dataDc, err := client.FindDeploymentConfigsByLabel(namespace, map[string]string{"rhmap/name": "data"})
+	// look for the Job if it already exists no need to run it again
+	existingJob, err := client.FindJobByName(namespace, deployment.Name+"-dataconfig-job")
+	if err != nil {
+		d.statusUpdate(deployment.Name, "error finding existing Job "+err.Error(), "error")
+		return deployment, nil
+	}
+	if existingJob != nil {
+		d.statusUpdate(deployment.Name, "configuration job "+deployment.Name+"-dataconfig-job already exists. No need to run again ", "complete")
+		return deployment, nil
+	}
+	dataDc, err := client.FindDeploymentConfigsByLabel(namespace, map[string]string{"rhmap/name": esName})
 	if err != nil {
 		d.statusUpdate(deployment.Name, "failed to find data DeploymentConfig. Cannot continue "+err.Error(), configError)
 		return nil, err
@@ -255,7 +266,7 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 		d.statusUpdate(deployment.Name, err.Error(), configError)
 		return nil, err
 	}
-	dataService, err := client.FindServiceByLabel(namespace, map[string]string{"rhmap/name": "data"})
+	dataService, err := client.FindServiceByLabel(namespace, map[string]string{"rhmap/name": esName})
 	if err != nil {
 		d.statusUpdate(deployment.Name, "failed to find data service cannot continue "+err.Error(), configError)
 		return nil, err
@@ -265,6 +276,7 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 		d.statusUpdate(deployment.Name, err.Error(), configError)
 		return nil, err
 	}
+	// if we get this far then the job does not exists so we will run another one which will update the FH_MONGODB_CONN_URL and create or update any database and user password definitions
 	jobOpts := map[string]interface{}{}
 	//we know we have a data deployment config and it will have 1 container
 	containerEnv := dataDc[0].Spec.Template.Spec.Containers[0].Env
@@ -310,6 +322,7 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 			})
 		}
 	}
+
 	tpl, err := d.TemplateLoader.Load("data-mongo-job")
 	if err != nil {
 		d.statusUpdate(deployment.Name, "failed to load job template "+err.Error(), configError)
@@ -339,19 +352,22 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 			switch ws.Type {
 			case watch.Added, watch.Modified:
 				j := ws.Object.(*batch.Job)
+				// succeeded will always be 1 if a deadline is reached
 				if j.Status.Succeeded >= 1 {
-					d.statusUpdate(deployment.Name, "configuration job succeeded ", configComplete)
 					w.Stop()
-				}
-				d.statusUpdate(deployment.Name, fmt.Sprintf("job status succeeded %d failed %d", j.Status.Succeeded, j.Status.Failed), configInProgress)
-				for _, condition := range j.Status.Conditions {
-					if condition.Reason == "DeadlineExceeded" {
-						d.statusUpdate(deployment.Name, "configuration job failed to configure database in time "+condition.Message, configError)
-						w.Stop()
+					for _, condition := range j.Status.Conditions {
+						if condition.Reason == "DeadlineExceeded" && condition.Type == "Failed" {
+							d.statusUpdate(deployment.Name, "configuration job  timed out and failed to configure database  "+condition.Message, configError)
+							//TODO Maybe we should delete the job a this point to allow it to be retried.
+						} else if condition.Type == "Complete" {
+							d.statusUpdate(deployment.Name, "configuration job succeeded ", configComplete)
+						}
 					}
 				}
+				d.statusUpdate(deployment.Name, fmt.Sprintf("job status succeeded %d failed %d", j.Status.Succeeded, j.Status.Failed), configInProgress)
 			case watch.Error:
 				d.statusUpdate(deployment.Name, " data configuration job error ", configError)
+				//TODO maybe pull back the log from the pod here? also remove the job in this condition so it can be retried
 				w.Stop()
 			}
 
