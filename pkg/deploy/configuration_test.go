@@ -151,7 +151,8 @@ func TestConfiguringCacheJob(t *testing.T) {
 func TestDataConfigurationJob(t *testing.T) {
 	tl := openshift.NewTemplateLoaderDecoder("../openshift/templates/")
 	msp := &mockStatusPublisher{}
-	dataConfig := deploy.DataMongoConfigure{StatusPublisher: msp, TemplateLoader: tl}
+	dataMongoConfig := deploy.DataMongoConfigure{StatusPublisher: msp, TemplateLoader: tl}
+	dataMySQLConfig := deploy.DataMysqlConfigure{StatusPublisher: msp, TemplateLoader: tl}
 	cases := []struct {
 		TestName    string
 		ExpectError bool
@@ -160,6 +161,7 @@ func TestDataConfigurationJob(t *testing.T) {
 		UpdateSVC   func(d *api.Service) *api.Service
 		UpdateJob   func(j *batch.Job) *batch.Job
 		Calls       map[string]int
+		Config      deploy.Configurer
 	}{
 		{
 			UpdateDC: func(d *dcapi.DeploymentConfig) *dcapi.DeploymentConfig {
@@ -172,6 +174,7 @@ func TestDataConfigurationJob(t *testing.T) {
 				return nil
 			},
 			TestName:    "test setup data happy",
+			Config:      &dataMongoConfig,
 			ExpectError: false,
 			Assert: func(d *dcapi.DeploymentConfig) error {
 				container := d.Spec.Template.Spec.Containers[0]
@@ -196,7 +199,52 @@ func TestDataConfigurationJob(t *testing.T) {
 			},
 		},
 		{
+			UpdateDC: func(d *dcapi.DeploymentConfig) *dcapi.DeploymentConfig {
+				return d
+			},
+			UpdateSVC: func(s *api.Service) *api.Service {
+				return s
+			},
+			UpdateJob: func(j *batch.Job) *batch.Job {
+				return nil
+			},
+			TestName:    "test setup data happy",
+			Config:      &dataMySQLConfig,
+			ExpectError: false,
+			Assert: func(d *dcapi.DeploymentConfig) error {
+				container := d.Spec.Template.Spec.Containers[0]
+				userFound := false
+				passFound := false
+				databaseFound := false
+				for _, env := range container.Env {
+					if env.Name == "MYSQL_USER" {
+						userFound = true
+					} else if env.Name == "MYSQL_PASSWORD" {
+						passFound = true
+					} else if env.Name == "MYSQL_DATABASE" {
+						databaseFound = true
+					}
+				}
+				if !userFound {
+					return fmt.Errorf("failed to find env var MYSQL_USER")
+				}
+				if !passFound {
+					return fmt.Errorf("failed to find env var MYSQL_PASSWORD")
+				}
+				if !databaseFound {
+					return fmt.Errorf("failed to find env var MYSQL_DATABASE")
+				}
+				return nil
+			},
+			Calls: map[string]int{
+				"FindDeploymentConfigsByLabel": 1,
+				"FindServiceByLabel":           1,
+				"FindJobByName":                1,
+			},
+		},
+		{
 			TestName:    "test setup data does not execute for data deployments",
+			Config:      &dataMongoConfig,
 			ExpectError: false,
 			Assert: func(d *dcapi.DeploymentConfig) error {
 				container := d.Spec.Template.Spec.Containers[0]
@@ -232,6 +280,7 @@ func TestDataConfigurationJob(t *testing.T) {
 		},
 		{
 			TestName:    "test setup data does not execute when missing service",
+			Config:      &dataMongoConfig,
 			ExpectError: true,
 			UpdateJob: func(j *batch.Job) *batch.Job {
 				return nil
@@ -256,6 +305,7 @@ func TestDataConfigurationJob(t *testing.T) {
 		},
 		{
 			TestName:    "test setup data does not execute when job already exists",
+			Config:      &dataMongoConfig,
 			ExpectError: false,
 			UpdateJob: func(j *batch.Job) *batch.Job {
 				return j
@@ -280,6 +330,7 @@ func TestDataConfigurationJob(t *testing.T) {
 		},
 		{
 			TestName:    "test setup data does not execute when missing kub svc def",
+			Config:      &dataMongoConfig,
 			ExpectError: true,
 			Assert: func(d *dcapi.DeploymentConfig) error {
 				if d != nil {
@@ -348,7 +399,7 @@ func TestDataConfigurationJob(t *testing.T) {
 			client.Returns["FindServiceByLabel"] = svcList
 			client.Returns["FindJobByName"] = job
 			// run our configure and test the result
-			deployment, err := dataConfig.Configure(client, &depConfig[0], "test")
+			deployment, err := tc.Config.Configure(client, &depConfig[0], "test")
 			if tc.ExpectError && err == nil {
 				t.Fatalf(" expected an error but got none")
 			}
