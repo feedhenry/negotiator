@@ -202,7 +202,7 @@ func TestDataConfigurationJob(t *testing.T) {
 				return nil
 			},
 			UpdateDC: func(d *dcapi.DeploymentConfig) *dcapi.DeploymentConfig {
-				d.Labels = map[string]string{"rhmap/name": "data"}
+				d.Labels = map[string]string{"rhmap/name": "data-mongo"}
 				d.Spec.Template.Spec.Containers[0].Env = []api.EnvVar{{
 					Name:  "MONGODB_REPLICA_NAME",
 					Value: "",
@@ -265,7 +265,7 @@ func TestDataConfigurationJob(t *testing.T) {
 		t.Run(tc.TestName, func(t *testing.T) {
 			//setup the DeploymentConfig fresh for each test
 			depConfig := []dcapi.DeploymentConfig{
-				{ObjectMeta: api.ObjectMeta{Name: "data"}, Spec: dcapi.DeploymentConfigSpec{
+				{ObjectMeta: api.ObjectMeta{Name: "data-mongo"}, Spec: dcapi.DeploymentConfigSpec{
 					Template: &api.PodTemplateSpec{
 						Spec: api.PodSpec{
 							Containers: []api.Container{{

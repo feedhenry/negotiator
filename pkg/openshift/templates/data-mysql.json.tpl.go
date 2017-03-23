@@ -125,7 +125,7 @@ var DataMySQLTemplate = `
                                         "command": [
                                             "/bin/sh",
                                             "-ic",
-                                            "MYSQL_PWD=\"{{index .Options "mysql_password"}}\" mysql -h 127.0.0.1 -u \"{{index .Options "mysql_user"}}\" -D \"{{index .Options "mysql_database"}}\" -e \"SELECT 1\""
+                                            "mysql -h 127.0.0.1 -u \"root\" -D \"mysql\" -e \"SELECT 1\""
                                         ]
                                     },
                                     "initialDelaySeconds": 0,
@@ -136,16 +136,8 @@ var DataMySQLTemplate = `
                                 },
                                 "env": [
                                     {
-                                        "name": "MYSQL_USER",
-                                        "value": "{{index .Options "mysql_user"}}"
-                                    },
-                                    {
-                                        "name": "MYSQL_PASSWORD",
-                                        "value": "{{index .Options "mysql_password"}}"
-                                    },
-                                    {
-                                        "name": "MYSQL_DATABASE",
-                                        "value": "{{index .Options "mysql_database"}}"
+                                        "name": "MYSQL_ROOT_PASSWORD",
+                                        "value": "{{genPass}}"
                                     }
                                 ],
                                 "resources": {

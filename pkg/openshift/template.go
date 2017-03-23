@@ -29,6 +29,7 @@ func init() {
 	PackagedTemplates["data-mongo"] = templates.DataMongoTemplate
 	PackagedTemplates["data-mongo-job"] = templates.DataMongoConfigJob
 	PackagedTemplates["data-mysql"] = templates.DataMySQLTemplate
+	PackagedTemplates["data-mysql-job"] = templates.DataMysqlConfigJob
 }
 
 func (tl *templateLoaderDecoder) Load(name string) (*template.Template, error) {

@@ -17,10 +17,6 @@ import (
 	k8api "k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/apis/batch"
 
-	"regexp"
-
-	"strings"
-
 	"github.com/feedhenry/negotiator/pkg/log"
 	roapi "github.com/openshift/origin/pkg/route/api"
 	"k8s.io/kubernetes/pkg/watch"
@@ -176,30 +172,6 @@ func (p Payload) Validate(template string) error {
 		if p.Repo == nil || p.Repo.Loc == "" || p.Repo.Ref == "" {
 			return ErrInvalid{message: "a repo is expected for a cloudapp"}
 		}
-	case templateDataMysql:
-		//regex to validate the values
-		regexes := map[string]string{
-			"mysql_user":     `[a-zA-Z]{3}[a-zA-Z]+`,
-			"mysql_password": `.{8}.*`,
-			"mysql_database": `[a-zA-Z]{3}[a-zA-Z]+`,
-		}
-
-		if p.Options == nil {
-			return ErrInvalid{message: "mysql options must be present and have the following keys: mysql_user, mysql_pass, mysql_database"}
-		}
-
-		problems := checkKeyValues(regexes, p.Options)
-
-		if val, ok := p.Options["storage"]; ok {
-			regex := `[0-9]+[a-zA-Z]+`
-			r, _ := regexp.Compile(regex)
-			if !r.MatchString(val.(string)) {
-				problems = append(problems, "storage option must match regex: "+regex)
-			}
-		}
-		if len(problems) > 0 {
-			return ErrInvalid{message: strings.Join(problems, "\n")}
-		}
 
 	}
 	if p.Target == nil {
@@ -210,25 +182,6 @@ func (p Payload) Validate(template string) error {
 	}
 
 	return nil
-}
-
-//checkKeyValues will check the dirty input against the validators provided,
-// if any validator field is missing or if it preseny but the value does not match the regex
-// it will be included in the returned slice of problems.
-// if the returned slice is empty then no issues were found
-func checkKeyValues(validators map[string]string, dirty map[string]interface{}) []string {
-	problems := []string{}
-	for field, regex := range validators {
-		if val, ok := dirty[field]; ok {
-			r, _ := regexp.Compile(regex)
-			if !r.MatchString(val.(string)) {
-				problems = append(problems, field+" must match regex: "+regex)
-			}
-		} else {
-			problems = append(problems, "missing required value: "+field)
-		}
-	}
-	return problems
 }
 
 // ServiceConfigFactory creates service configs
