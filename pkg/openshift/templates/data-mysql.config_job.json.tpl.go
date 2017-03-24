@@ -7,7 +7,7 @@ var DataMysqlConfigJob = `
   "apiVersion": "batch/v1",
   "kind": "Job",
   "metadata": {
-    "name": "{{index . "name"}}-dataconfig-job",
+    "name": "{{index . "name"}}-mysql-dataconfig-job",
 	"labels": {
 		"rhmap/name":"datamysqlconfig"
 	}
