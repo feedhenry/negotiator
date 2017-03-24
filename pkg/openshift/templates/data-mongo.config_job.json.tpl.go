@@ -6,7 +6,7 @@ var DataMongoConfigJob = `
   "apiVersion": "batch/v1",
   "kind": "Job",
   "metadata": {
-    "name": "{{index . "name"}}-dataconfig-job",
+    "name": "{{index . "name"}}-mongo-dataconfig-job",
 	"labels": {
 		"rhmap/name":"datamongoconfig"
 	}

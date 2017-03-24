@@ -150,8 +150,22 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, deployme
 	}
 	errs := []string{}
 	//configure for any environment services already deployed
+	// ensure not to call configure multiple times for instance when mongo replica set present
+	configured := []string{}
+	var isConfigured = func(name string) bool {
+		for _, val := range configured {
+			if val == name {
+				return true
+			}
+		}
+		return false
+	}
 	for _, s := range services {
 		serviceName := s.Labels["rhmap/name"]
+		if isConfigured(serviceName) {
+			continue
+		}
+		configured = append(configured, serviceName)
 		c := cac.ConfigurationFactory.Factory(serviceName)
 		_, err := c.Configure(client, deployment, namespace)
 		if err != nil {
@@ -340,13 +354,13 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 		d.statusUpdate(deployment.Name, err.Error(), "error")
 		return nil, err
 	}
+	w, err := client.CreateJobToWatch(j, namespace)
+	if err != nil {
+		d.statusUpdate(deployment.Name, "failed to CreateJobToWatch "+err.Error(), configError)
+		return nil, err
+	}
 	//set off job and watch it till complete
 	go func() {
-		w, err := client.CreateJobToWatch(j, namespace)
-		if err != nil {
-			d.statusUpdate(deployment.Name, "failed to CreateJobToWatch "+err.Error(), configError)
-			return
-		}
 		result := w.ResultChan()
 		for ws := range result {
 			switch ws.Type {
