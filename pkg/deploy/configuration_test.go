@@ -26,7 +26,11 @@ func (msp *mockStatusPublisher) Publish(key string, status deploy.ConfigurationS
 }
 func (msp *mockStatusPublisher) Finish(key string) {}
 
-func TestConfiguringCacheJob(t *testing.T) {
+func TestConfigure(t *testing.T) {
+	t.Skip("STILL NEED TO WRITE THIS TEST ")
+}
+
+func TestCacheConfigurationJob(t *testing.T) {
 	msp := &mockStatusPublisher{}
 	cacheConfig := deploy.CacheRedisConfigure{StatusPublisher: msp}
 	depConfig := []dcapi.DeploymentConfig{
