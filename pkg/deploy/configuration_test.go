@@ -359,6 +359,34 @@ func TestDataConfigurationJob(t *testing.T) {
 			},
 		},
 		{
+			TestName:  "test setup data does not execute multiple times",
+			GetConfig: getDataMongoConfig,
+			GetDC: func() []dcapi.DeploymentConfig {
+				dc := getMongodc()
+				dc = append(dc, dc[0])
+				return dc
+			},
+			GetSC:       getMongosc,
+			ExpectError: false,
+			Assert: func(d *dcapi.DeploymentConfig) error {
+				return nil
+			},
+			UpdateJob: func(j *batch.Job) *batch.Job {
+				return nil
+			},
+			UpdateDC: func(d *dcapi.DeploymentConfig) *dcapi.DeploymentConfig {
+				d
+			},
+			UpdateSVC: func(s *api.Service) *api.Service {
+				return s
+			},
+			Calls: map[string]int{
+				"FindDeploymentConfigsByLabel": 1,
+				"FindServiceByLabel":           1,
+				"FindJobByName":                1,
+			},
+		},
+		{
 			TestName:    "test setup data does not execute when missing service",
 			GetConfig:   getDataMongoConfig,
 			GetDC:       getMongodc,

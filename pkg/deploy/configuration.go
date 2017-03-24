@@ -151,21 +151,14 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, deployme
 	errs := []string{}
 	//configure for any environment services already deployed
 	// ensure not to call configure multiple times for instance when mongo replica set present
-	configured := []string{}
-	var isConfigured = func(name string) bool {
-		for _, val := range configured {
-			if val == name {
-				return true
-			}
-		}
-		return false
-	}
+	configured := map[string]bool{}
+
 	for _, s := range services {
 		serviceName := s.Labels["rhmap/name"]
-		if isConfigured(serviceName) {
+		if _, ok := configured[serviceName]; ok {
 			continue
 		}
-		configured = append(configured, serviceName)
+		configured[serviceName] = true
 		c := cac.ConfigurationFactory.Factory(serviceName)
 		_, err := c.Configure(client, deployment, namespace)
 		if err != nil {
