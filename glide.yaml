@@ -38,3 +38,7 @@ import:
   version: ~1.0.0
 - package: github.com/go-redis/redis
   version: ~6.0.0
+- package: gopkg.in/mgo.v2
+- package: github.com/spf13/cobra
+- package: github.com/go-sql-driver/mysql
+  version: v1.3

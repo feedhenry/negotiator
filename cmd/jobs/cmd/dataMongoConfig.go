@@ -23,12 +23,12 @@ import (
 	mgo "gopkg.in/mgo.v2"
 )
 
-type dataConfigCMD struct {
+type dataMongoConfigCMD struct {
 	*cobra.Command
 }
 
-// dataconfigCmd represents the dataconfig command
-var datamongoconfig = &cobra.Command{
+// dataMongoConfigCmd represents the dataconfig command
+var dataMongoConfigCmd = &cobra.Command{
 	Use:   "datamongoconfig",
 	Short: "data config configures the data service",
 	Long:  `data config connects to a given environment data service and creates a new database and user name password combo based on the arguments passed in.`,
@@ -78,13 +78,12 @@ var datamongoconfig = &cobra.Command{
 }
 
 func init() {
-	RootCmd.AddCommand(datamongoconfig)
-	datamongoconfig.Flags().StringP("dbhost", "d", "", "db host")
-	datamongoconfig.Flags().StringP("admin-user", "a", "", "admin user name")
-	datamongoconfig.Flags().StringP("admin-pass", "p", "", "admin pasword")
-	datamongoconfig.Flags().String("database", "db", "database to create")
-	datamongoconfig.Flags().String("database-user", "", "database  user to create")
-	datamongoconfig.Flags().String("database-pass", "", "database  pass to create")
-	datamongoconfig.Flags().String("replicaSet", "", "replicaSet to use")
-
+	RootCmd.AddCommand(dataMongoConfigCmd)
+	dataMongoConfigCmd.Flags().StringP("dbhost", "d", "", "db host")
+	dataMongoConfigCmd.Flags().StringP("admin-user", "a", "", "admin user name")
+	dataMongoConfigCmd.Flags().StringP("admin-pass", "p", "", "admin pasword")
+	dataMongoConfigCmd.Flags().String("database", "db", "database to create")
+	dataMongoConfigCmd.Flags().String("database-user", "", "database  user to create")
+	dataMongoConfigCmd.Flags().String("database-pass", "", "database  pass to create")
+	dataMongoConfigCmd.Flags().String("replicaSet", "", "replicaSet to use")
 }

@@ -31,7 +31,7 @@ func init() {
 	PackagedTemplates["data-mongo-replica"] = templates.DataMongoReplicaTemplate
 	PackagedTemplates["data-mongo-job"] = templates.DataMongoConfigJob
 	PackagedTemplates["data-mysql"] = templates.DataMySQLTemplate
-
+	PackagedTemplates["data-mysql-job"] = templates.DataMysqlConfigJob
 }
 
 func (tl *templateLoaderDecoder) Load(name string) (*template.Template, error) {
@@ -50,7 +50,7 @@ func (tl *templateLoaderDecoder) Load(name string) (*template.Template, error) {
 			return n == total-1
 		},
 		"genPass": genPass,
-		"generatedPass": func()string{
+		"generatedPass": func() string {
 			return generatedPass
 		},
 		"isset": func(vals map[string]interface{}, key string) bool {

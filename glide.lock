@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 hash: 9a6e3cf12caf8ab123af93da77414d1582fbc2d33842577a3de56020e2ec9c6e
 updated: 2017-03-23T14:41:17.778760607Z
+=======
+hash: 073f4e72aceca35ca4a3152b015f07f078a3a0ce34327f59fe63ea9d25263001
+updated: 2017-03-22T10:09:11.908091673Z
+>>>>>>> 119285b47bc2fa6ee5084378387855ae56cbaeb2
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -131,7 +136,7 @@ imports:
 - name: github.com/evanphx/json-patch
   version: 465937c80b3c07a7c7ad20cc934898646a91c1de
 - name: github.com/fsnotify/fsnotify
-  version: a904159b9206978bb6d53fcc7a769e5cd726c737
+  version: f12c6236fe7b5cf6bcf30e5935d08cb079d78334
 - name: github.com/fsouza/go-dockerclient
   version: bf97c77db7c945cbcdbf09d56c6f87a66f54537b
   subpackages:
@@ -162,6 +167,8 @@ imports:
   - internal/hashtag
   - internal/pool
   - internal/proto
+- name: github.com/go-sql-driver/mysql
+  version: a0583e0143b1624142adab07e0e97fe106d99561
 - name: github.com/gogo/protobuf
   version: 82d16f734d6d871204a3feb1a73cb220cc92574c
   subpackages:
@@ -248,7 +255,7 @@ imports:
 - name: github.com/gorilla/mux
   version: 0eeaf8392f5b04950925b8a69fe70f110fa7cbfc
 - name: github.com/hashicorp/hcl
-  version: 372e8ddaa16fd67e371e9323807d056b799360af
+  version: d8c773c4cba11b11539e3d45f93daeaa5dcf1fa1
   subpackages:
   - hcl/ast
   - hcl/parser
@@ -266,14 +273,16 @@ imports:
   version: 3f831b65b61282ba6bece21b91beea2edc4c887a
 - name: github.com/juju/ratelimit
   version: 77ed1c8a01217656d2080ad51981f6e99adaa177
+- name: github.com/kr/fs
+  version: 2788f0dbd16903de03cb8186e5c7d97b69ad387b
 - name: github.com/magiconair/properties
-  version: b3b15ef068fd0b17ddf408a23669f20811d194d2
+  version: 61b492c03cf472e0c6419be5899b8e0dc28b1b88
 - name: github.com/matttproud/golang_protobuf_extensions
   version: fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a
   subpackages:
   - pbutil
 - name: github.com/mitchellh/mapstructure
-  version: db1efb556f84b25a0a13a04aad883943538ad2e0
+  version: 740c764bc6149d3f1806231418adb9f52c11bcbf
 - name: github.com/opencontainers/runc
   version: 7ca2aa4873aea7cb4265b1726acb24b90d8726c6
   subpackages:
@@ -328,9 +337,11 @@ imports:
 - name: github.com/pelletier/go-buffruneio
   version: df1e16fde7fc330a0ca68167c23bf7ed6ac31d6d
 - name: github.com/pelletier/go-toml
-  version: c9506ee96398e7571356462217b9e24d6a628d71
+  version: 0049ab3dc4c4c70a9eee23087437b69c0dde2130
 - name: github.com/pkg/errors
   version: 645ef00459ed84a119197bfb8d8205042c6df63d
+- name: github.com/pkg/sftp
+  version: 4d0e916071f68db74f8a73926335f809396d6b42
 - name: github.com/prometheus/client_golang
   version: c5b7fccd204277076155f10851dad72b76a49317
   subpackages:
@@ -350,29 +361,36 @@ imports:
 - name: github.com/rs/cors
   version: a62a804a8a009876ca59105f7899938a1349f4b3
 - name: github.com/rs/xhandler
-  version: d9d9599b6aaf6a058cb7b1f48291ded2cbd13390
+  version: ed27b6fd65218132ee50cd95f38474a3d8a2cd12
 - name: github.com/satori/go.uuid
-  version: 879c5887cd475cd7864858769793b2ceb0d44feb
+  version: b061729afc07e77a8aa4fad0a2fd840958f1942a
 - name: github.com/Sirupsen/logrus
   version: d26492970760ca5d33129d2d799e34be5c4782eb
 - name: github.com/spf13/afero
-  version: 72b31426848c6ef12a7a8e216708cb0d1530f074
+  version: b28a7effac979219c2a2ed6205a4d70e4b1bcd02
   subpackages:
   - mem
+  - sftp
 - name: github.com/spf13/cast
-  version: d1139bab1c07d5ad390a65e7305876b3c1a8370b
+  version: e31f36ffc91a2ba9ddb72a4b6a607ff9b3d3cb63
 - name: github.com/spf13/cobra
-  version: f62e98d28ab7ad31d707ba837a966378465c7b57
+  version: 7be4beda01ec05d0b93d80b3facd2b6f44080d94
 - name: github.com/spf13/jwalterweatherman
-  version: fa7ca7e836cf3a8bb4ebf799f472c12d7e903d66
+  version: 33c24e77fb80341fe7130ee7c594256ff08ccc46
 - name: github.com/spf13/pflag
-  version: 1560c1005499d61b80f865c04d39ca7505bf7f0b
+  version: 9ff6c6923cfffbcd502984b8e0c80539a94968b7
 - name: github.com/spf13/viper
-  version: 651d9d916abc3c3d6a91a12549495caba5edffd2
+  version: 84f94806c67f59dd7ae87bc5351f7a9c94a4558d
 - name: github.com/ugorji/go
   version: f4485b318aadd133842532f841dc205a8e339d74
   subpackages:
   - codec
+- name: golang.org/x/crypto
+  version: c84e1f8e3a7e322d497cd16c0e8a13c7e127baf3
+  subpackages:
+  - bcrypt
+  - blowfish
+  - ssh
 - name: golang.org/x/net
   version: 62685c2d7ca23c807425dca88b11a3e2323dab41
   subpackages:
@@ -394,11 +412,11 @@ imports:
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: 8f0908ab3b2457e2e15403d3697c9ef5cb4b57a9
+  version: 8d1157a435470616f975ff9bb013bea8d0962067
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 06d6eba81293389cafdff7fca90d75592194b2d9
+  version: ceefd2213ed29504fff30155163c8f59827734f3
   subpackages:
   - transform
   - unicode/norm
@@ -431,7 +449,7 @@ imports:
   - internal/sasl
   - internal/scram
 - name: gopkg.in/yaml.v2
-  version: a83829b6f1293c91addabc89d0571c246397bbf4
+  version: a3f3340b5840cee44f372bddb5880fcbc419b46a
 - name: k8s.io/kubernetes
   version: 52492b4bff99ef3b8ca617d385a3ff0612f9402d
   repo: git://github.com/openshift/kubernetes.git
