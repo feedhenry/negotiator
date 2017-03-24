@@ -26,7 +26,11 @@ func (msp *mockStatusPublisher) Publish(key string, status deploy.ConfigurationS
 }
 func (msp *mockStatusPublisher) Finish(key string) {}
 
-func TestConfiguringCacheJob(t *testing.T) {
+func TestConfigure(t *testing.T) {
+	t.Skip("STILL NEED TO WRITE THIS TEST ")
+}
+
+func TestCacheConfigurationJob(t *testing.T) {
 	msp := &mockStatusPublisher{}
 	cacheConfig := deploy.CacheRedisConfigure{StatusPublisher: msp}
 	depConfig := []dcapi.DeploymentConfig{
@@ -356,34 +360,6 @@ func TestDataConfigurationJob(t *testing.T) {
 				"FindDeploymentConfigsByLabel": 0,
 				"FindServiceByLabel":           0,
 				"FindJobByName":                0,
-			},
-		},
-		{
-			TestName:  "test setup data does not execute multiple times",
-			GetConfig: getDataMongoConfig,
-			GetDC: func() []dcapi.DeploymentConfig {
-				dc := getMongodc()
-				dc = append(dc, dc[0])
-				return dc
-			},
-			GetSC:       getMongosc,
-			ExpectError: false,
-			Assert: func(d *dcapi.DeploymentConfig) error {
-				return nil
-			},
-			UpdateJob: func(j *batch.Job) *batch.Job {
-				return nil
-			},
-			UpdateDC: func(d *dcapi.DeploymentConfig) *dcapi.DeploymentConfig {
-				d
-			},
-			UpdateSVC: func(s *api.Service) *api.Service {
-				return s
-			},
-			Calls: map[string]int{
-				"FindDeploymentConfigsByLabel": 1,
-				"FindServiceByLabel":           1,
-				"FindJobByName":                1,
 			},
 		},
 		{
