@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 
+	"github.com/go-redis/redis"
+
 	"github.com/pkg/errors"
 )
 
@@ -39,4 +41,12 @@ func (c Conf) Validate() error {
 		return errors.New(err)
 	}
 	return nil
+}
+
+func (c Conf) Redis() redis.Options {
+	return redis.Options{
+		Addr:     os.Getenv("REDIS_SERVICE_HOST"),
+		Password: os.Getenv("REDIS_SERVICE_PASS"),
+		DB:       0,
+	}
 }

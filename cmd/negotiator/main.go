@@ -4,23 +4,21 @@ package main
 import (
 	"net/http"
 
+	"github.com/go-redis/redis"
+
 	"flag"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/feedhenry/negotiator/pkg/config"
 	"github.com/feedhenry/negotiator/pkg/deploy"
 	pkgos "github.com/feedhenry/negotiator/pkg/openshift"
+	"github.com/feedhenry/negotiator/pkg/status"
 	"github.com/feedhenry/negotiator/pkg/web"
 )
 
 var logLevel string
 
-func main() {
-	flag.StringVar(&logLevel, "log-level", "info", "use this to set log level: error, info, debug")
-	flag.Parse()
-	conf := config.Conf{}
-	clientFactory := pkgos.ClientFactory{}
-	router := web.BuildRouter()
+func setupLogger() {
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 	switch logLevel {
 	case "info":
@@ -32,13 +30,33 @@ func main() {
 	default:
 		logrus.SetLevel(logrus.ErrorLevel)
 	}
+}
+
+func main() {
+	flag.StringVar(&logLevel, "log-level", "info", "use this to set log level: error, info, debug")
+	flag.Parse()
+	conf := config.Conf{}
+	clientFactory := pkgos.ClientFactory{}
+	setupLogger()
 	logger := logrus.StandardLogger()
+	router := web.BuildRouter()
 	templates := pkgos.NewTemplateLoaderDecoder(conf.TemplateDir())
+
+	var statusPublisher deploy.StatusPublisher
+	var statusRetriever web.StatusRetriever
+	//status publisher setup
+	{
+		redisOpts := conf.Redis()
+		redisClient := redis.NewClient(&redisOpts)
+		pubRet := status.New(redisClient)
+		statusRetriever = pubRet // it implments both interfaces
+		statusPublisher = pubRet
+	}
 	// deploy setup
 	{
 		//not use a log publisher this would be replaced with something that published to redis
 		serviceConfigFactory := &deploy.ConfigurationFactory{
-			StatusPublisher: deploy.LogStatusPublisher{Logger: logger},
+			StatusPublisher: statusPublisher,
 			TemplateLoader:  templates,
 			Logger:          logger,
 		}
@@ -46,6 +64,8 @@ func main() {
 		deployController := deploy.New(templates, templates, logger, serviceConfigController)
 		web.DeployRoute(router, logger, deployController, clientFactory)
 	}
+	// Routes setup
+
 	// system setup
 	{
 		web.SysRoute(router)
@@ -57,6 +77,10 @@ func main() {
 	// templates setup
 	{
 		web.Templates(router, templates)
+	}
+	// lastAction setup
+	{
+		web.LastAction(router, statusRetriever)
 	}
 	//http handler
 	{

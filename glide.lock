@@ -1,5 +1,5 @@
-hash: 689994729b0ea7b6c7b11aac4a6005be772ddb8a889c184522c646172ba39a51
-updated: 2017-03-19T18:21:20.069303083Z
+hash: 9a6e3cf12caf8ab123af93da77414d1582fbc2d33842577a3de56020e2ec9c6e
+updated: 2017-03-23T14:41:17.778760607Z
 imports:
 - name: github.com/beorn7/perks
   version: 3ac7bf7a47d159a033b107610db8a1b6575507a4
@@ -154,6 +154,14 @@ imports:
   - external/golang.org/x/sys/unix
 - name: github.com/ghodss/yaml
   version: 73d445a93680fa1a78ae23a5839bad48f32ba1ee
+- name: github.com/go-redis/redis
+  version: 2cf5af9928978bbef8d1076607022403439e177c
+  subpackages:
+  - internal
+  - internal/consistenthash
+  - internal/hashtag
+  - internal/pool
+  - internal/proto
 - name: github.com/gogo/protobuf
   version: 82d16f734d6d871204a3feb1a73cb220cc92574c
   subpackages:

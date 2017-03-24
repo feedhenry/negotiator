@@ -69,9 +69,10 @@ func (cf *ConfigurationFactory) Factory(service string) Configurer {
 
 // ConfigurationStatus represent the current status of the configuration
 type ConfigurationStatus struct {
-	Status  string    `json:"status"`
-	Log     []string  `json:"log"`
-	Started time.Time `json:"-"`
+	Status      string    `json:"status"`
+	Description string    `json:"description"`
+	Log         []string  `json:"log"`
+	Started     time.Time `json:"-"`
 }
 
 // StatusPublisher defines what a status publisher should implement
