@@ -2,32 +2,40 @@ SHELL := /bin/bash
 VERSION := 0.0.7
 NAME := negotiator
 
-# To build for a os you are not on, use (for_(linux|mac|windows) must be called first):
-# make for_linux build
+# To build for a os you are not on, use:
+# make build GOOS=linux
 
 # To compile for linux, create the docker image 
 # and push it to docker.io/feedhenry/negotiator with the version specified above, use: 
-# make docker_build_push
+# make docker_build_push GOOS=linux
 
 # This is the first target, so it is the default, i.e.
 # make for_linux is the same as make for_linux build
 .PHONY: build
 build: build_negotiator build_jobs build_services
 
-.PHONY: for_linux
-for_linux:
-	export GOOS=linux
-.PHONY: for_mac
-for_mac:
-	export GOOS=darwin
+.PHONY: build_negotiator
+build_negotiator:
+	cd cmd/negotiator && go build -ldflags "-X main.Version=v$(VERSION)"
 
-.PHONY: for_windows
-for_windows:
-	export GOOS=windows
+.PHONY: build_jobs
+build_jobs:
+	cd cmd/jobs && go build -ldflags "-X main.Version=v$(VERSION)"
 
-.PHONY: phils-test
-phils-test:
-	echo $(MAKECMDGOALS)
+.PHONY: build_services
+build_services:
+	cd cmd/services && go build -ldflags "-X main.Version=v$(VERSION)"
+
+.PHONY: docker_build
+docker_build:
+	docker build -t feedhenry/negotiator:${VERSION} .
+
+.PHONY: docker_push
+docker_push:
+	docker push feedhenry/negotiator:${VERSION}
+
+.PHONY: docker_build_push
+docker_build_push: build docker_build docker_push
 
 .PHONY: all
 all:
@@ -61,29 +69,6 @@ test-unit:
 .PHONY: test-race
 test-race:
     go test -v -cpu=1,2,4 -short -race `go list ./... | grep -v /vendor/`
-
-.PHONY: build_negotiator
-build_negotiator:
-	cd cmd/negotiator && go build -ldflags "-X main.Version=v$(VERSION)"
-
-.PHONY: build_jobs
-build_jobs:
-	cd cmd/jobs && go build -ldflags "-X main.Version=v$(VERSION)"
-
-.PHONY: build_services
-build_services:
-	cd cmd/services && go build -ldflags "-X main.Version=v$(VERSION)"
-
-.PHONY: docker_build
-docker_build:
-	docker build -t feedhenry/negotiator:${VERSION} .
-
-.PHONY: docker_push
-docker_push:
-	docker push feedhenry/negotiator:${VERSION}
-
-.PHONY: docker_build_push
-docker_build_push: for_linux build docker_build docker_push
 
 .PHONY: deps
 deps:
