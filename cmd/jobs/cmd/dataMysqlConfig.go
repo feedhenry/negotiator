@@ -110,7 +110,7 @@ func configMysql(cmd *cobra.Command, args []string) {
 		log.Fatalf("failed to connect to MySQL with DSN ("+dsn+")", err.Error())
 	}
 
-	stmtCreateDatabase, err := db.Prepare("CREATE DATABASE " + userDb)
+	stmtCreateDatabase, err := db.Prepare("CREATE DATABASE IF NOT EXISTS " + userDb)
 	if err != nil {
 		log.Fatalf("failed to prepare the create database statement: %s", err.Error())
 	}
@@ -119,16 +119,8 @@ func configMysql(cmd *cobra.Command, args []string) {
 		log.Fatalf("error executing create database query: %s", err.Error())
 	}
 
-	stmtCreateUser, err := db.Prepare("CREATE USER '" + username + "'@'%' IDENTIFIED BY '" + userPass + "'")
-	if err != nil {
-		log.Fatalf("failed to prepare the create user statement: %s", err.Error())
-	}
-	defer stmtCreateUser.Close()
-	if _, err := stmtCreateUser.Exec(); err != nil {
-		log.Fatalf("error executing create user query: %s", err.Error())
-	}
-
-	stmtGrantUserPerms, err := db.Prepare("GRANT ALL PRIVILEGES ON " + userDb + ".* TO '" + username + "'@'%';")
+	//Grant will create the user if missing, and update the password if altered.
+	stmtGrantUserPerms, err := db.Prepare("GRANT ALL PRIVILEGES ON " + userDb + ".* TO '" + username + "'@'%' IDENTIFIED BY '" + userPass + "';")
 	if err != nil {
 		log.Fatalf("failed to prepare the grant user permissions statement: %s", err.Error())
 	}

@@ -489,7 +489,10 @@ func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentC
 				})
 			}
 		}
-
+		deployment.Spec.Template.Spec.Containers[ci].Env = append(deployment.Spec.Template.Spec.Containers[ci].Env, k8api.EnvVar{
+			Name:  "MYSQL_HOST",
+			Value: dataService[0].GetName(),
+		})
 	}
 	tpl, err := d.TemplateLoader.Load(jobName)
 	if err != nil {
