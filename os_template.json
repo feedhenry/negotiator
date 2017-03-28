@@ -106,7 +106,7 @@
                 "spec": {
                     "containers": [{
                         "name": "negotiator",
-                        "image": "feedhenry/negotiator:0.0.7",
+                        "image": "feedhenry/negotiator:0.0.8",
                         "env": [],
                         "resources": {},
                         "terminationMessagePath": "/dev/termination-log",

@@ -21,7 +21,7 @@ var DataMongoConfigJob = `
         "containers": [
           {
             "name": "datamongoconfig",
-            "image": "feedhenry/negotiator:0.0.7",
+            "image": "feedhenry/negotiator:0.0.8",
             "command": ["jobs",	
               "datamongoconfig",
 			  "--admin-user={{if isset . "admin-user"}}{{ index . "admin-user"}}{{end}}",
