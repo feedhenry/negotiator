@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"sync"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/feedhenry/negotiator/pkg/deploy"
 	"github.com/feedhenry/negotiator/pkg/mock"
@@ -16,7 +18,7 @@ import (
 
 type mockServiceConfigFactory struct{}
 
-func (msf mockServiceConfigFactory) Factory(service string, config *deploy.Configuration) deploy.Configurer {
+func (msf mockServiceConfigFactory) Factory(service string, config *deploy.Configuration, wait *sync.WaitGroup) deploy.Configurer {
 	return mockConfigurer{}
 }
 func (msf *mockServiceConfigFactory) Publisher(pub deploy.StatusPublisher) {
@@ -266,7 +268,7 @@ func TestDeploy(t *testing.T) {
 					Host:  "http://test.com",
 					Token: "test",
 				},
-				ServiceName:  "cacheservice",
+				ServiceName:  "data",
 				Domain:       "rhmap",
 				ProjectGUID:  "guid",
 				CloudAppGUID: "guid",
@@ -333,6 +335,8 @@ func TestDeploy(t *testing.T) {
 		},
 	}
 	tl := openshift.NewTemplateLoaderDecoder("../resources/templates/")
+	logger := logrus.StandardLogger()
+	lsp := deploy.LogStatusPublisher{Logger: logger}
 	for _, tc := range cases {
 		t.Run(tc.TestName, func(t *testing.T) {
 			pc := mock.NewPassClient()
@@ -340,8 +344,8 @@ func TestDeploy(t *testing.T) {
 				pc.Returns = tc.Returns
 			}
 			pc.Asserts = tc.ClientAsserts
-			sc := deploy.NewEnvironmentServiceConfigController(&mockServiceConfigFactory{}, logrus.StandardLogger(), nil, tl)
-			dc := deploy.New(tl, tl, logrus.StandardLogger(), sc)
+			sc := deploy.NewEnvironmentServiceConfigController(&mockServiceConfigFactory{}, logger, nil, tl)
+			dc := deploy.New(tl, tl, logrus.StandardLogger(), sc, lsp)
 			dispatched, err := dc.Template(pc, tc.Template, tc.NameSpace, tc.Payload)
 			if !tc.ExpectError && err != nil {
 				fmt.Printf("%+v", err)

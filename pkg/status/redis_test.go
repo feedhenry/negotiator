@@ -18,7 +18,8 @@ func TestStatus(t *testing.T) {
 	}
 	cases := []struct {
 		Name               string
-		Status             deploy.Status
+		Status             string
+		Description        string
 		ExpectGetError     bool
 		ExpectPublishError bool
 		GetKey             string
@@ -26,11 +27,9 @@ func TestStatus(t *testing.T) {
 		Assert             func(cs *deploy.Status) error
 	}{
 		{
-			Name: "test publish and get configuration status",
-			Status: deploy.Status{
-				Status:      "in progress",
-				Description: "deploying your service",
-			},
+			Name:               "test publish and get configuration status",
+			Status:             "in progress",
+			Description:        "a Description",
 			ExpectGetError:     false,
 			ExpectPublishError: false,
 			PubKey:             "test",
@@ -43,11 +42,9 @@ func TestStatus(t *testing.T) {
 			},
 		},
 		{
-			Name: "test get configuration status thats not there",
-			Status: deploy.Status{
-				Status:      "in progress",
-				Description: "deploying your service",
-			},
+			Name:               "test get configuration status thats not there",
+			Status:             "in progress",
+			Description:        "a Description",
 			ExpectGetError:     true,
 			ExpectPublishError: false,
 			PubKey:             "test",
@@ -68,7 +65,7 @@ func TestStatus(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			ret := status.New(redisClient)
-			err := ret.Publish(tc.PubKey, tc.Status)
+			err := ret.Publish(tc.PubKey, tc.Status, tc.Description)
 			if tc.ExpectPublishError && err == nil {
 				t.Fatalf("expected a publish error but got none ")
 			}

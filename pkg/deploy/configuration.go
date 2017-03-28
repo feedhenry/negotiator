@@ -207,6 +207,14 @@ type CacheRedisConfigure struct {
 	wait            *sync.WaitGroup
 }
 
+func NewCacheRedisConfigure(sp StatusPublisher, statusKey string, wait *sync.WaitGroup) *CacheRedisConfigure {
+	return &CacheRedisConfigure{
+		StatusPublisher: sp,
+		statusKey:       statusKey,
+		wait:            wait,
+	}
+}
+
 // Configure configures the current DeploymentConfig with the need configuration to use cache
 func (c *CacheRedisConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
 	c.wait.Add(1)
@@ -520,7 +528,10 @@ func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentC
 				})
 			}
 		}
-
+		deployment.Spec.Template.Spec.Containers[ci].Env = append(deployment.Spec.Template.Spec.Containers[ci].Env, k8api.EnvVar{
+			Name:  "MYSQL_HOST",
+			Value: dataService[0].GetName(),
+		})
 	}
 	tpl, err := d.TemplateLoader.Load(jobName)
 	if err != nil {
