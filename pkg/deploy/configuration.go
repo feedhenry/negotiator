@@ -187,16 +187,16 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, config *
 			errs = append(errs, err.Error())
 		}
 	}
-	waitGroup.Wait()
-	if _, err := client.UpdateDeployConfigInNamespace(namespace, deployment); err != nil {
-		cac.StatusPublisher.Publish(statusKey, configError, "failed to update DeployConfig after configuring it")
-		return errors.Wrap(err, "failed to update deployment after configuring it ")
-	}
-	if len(errs) > 0 {
-		cac.StatusPublisher.Publish(statusKey, configError, fmt.Sprintf(" some configuration jobs failed %v", errs))
-		return errors.New(fmt.Sprintf(" some configuration jobs failed %v", errs))
-	}
-	cac.StatusPublisher.Publish(statusKey, configComplete, "service configuration complete")
+	go func() {
+		waitGroup.Wait()
+		if _, err := client.UpdateDeployConfigInNamespace(namespace, deployment); err != nil {
+			cac.StatusPublisher.Publish(statusKey, configError, "failed to update DeployConfig after configuring it")
+		}
+		if len(errs) > 0 {
+			cac.StatusPublisher.Publish(statusKey, configError, fmt.Sprintf(" some configuration jobs failed %v", errs))
+		}
+		cac.StatusPublisher.Publish(statusKey, configComplete, "service configuration complete")
+	}()
 	return nil
 }
 
@@ -339,7 +339,9 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 	jobOpts["database"] = deployment.Name
 	jobOpts["name"] = deployment.Name
 	if v, ok := deployment.Labels["rhmap/guid"]; ok {
-		jobOpts["database"] = v
+		if v != "" {
+			jobOpts["database"] = v
+		}
 	}
 	jobOpts["database-pass"] = genPass(16)
 	jobOpts["database-user"] = jobOpts["database"]

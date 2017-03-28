@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-VERSION := 0.0.8
+VERSION := 0.0.9
 NAME := negotiator
 
 # To build for a os you are not on, use:
