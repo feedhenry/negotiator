@@ -5,26 +5,12 @@ import (
 
 	"github.com/go-redis/redis"
 
+	"fmt"
+
 	"github.com/pkg/errors"
 )
 
 type Conf struct {
-}
-
-func (c *Conf) Namespace(override string) string {
-	if override != "" {
-		return override
-	}
-	//populated by the downward api https://github.com/kubernetes/kubernetes/blob/release-1.0/docs/user-guide/downward-api.md
-	return os.Getenv("DEPLOY_NAMESPACE")
-}
-
-func (c *Conf) APIHost() string {
-	return os.Getenv("API_HOST")
-}
-
-func (c *Conf) APIToken() string {
-	return os.Getenv("API_TOKEN")
 }
 
 func (c Conf) TemplateDir() string {
@@ -44,8 +30,9 @@ func (c Conf) Validate() error {
 }
 
 func (c Conf) Redis() redis.Options {
+	addr := fmt.Sprintf("%s:%s", os.Getenv("REDIS_SERVICE_HOST"), os.Getenv("REDIS_SERVICE_PORT"))
 	return redis.Options{
-		Addr:     os.Getenv("REDIS_SERVICE_HOST"),
+		Addr:     addr,
 		Password: os.Getenv("REDIS_SERVICE_PASS"),
 		DB:       0,
 	}

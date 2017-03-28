@@ -46,6 +46,7 @@ func main() {
 	var statusRetriever web.StatusRetriever
 	//status publisher setup
 	{
+		logrus.Info("using redis publisher")
 		redisOpts := conf.Redis()
 		redisClient := redis.NewClient(&redisOpts)
 		pubRet := status.New(redisClient)
@@ -60,7 +61,7 @@ func main() {
 			TemplateLoader:  templates,
 			Logger:          logger,
 		}
-		serviceConfigController := deploy.NewEnvironmentServiceConfigController(serviceConfigFactory, logger, nil, templates)
+		serviceConfigController := deploy.NewEnvironmentServiceConfigController(serviceConfigFactory, logger, statusPublisher, templates)
 		deployController := deploy.New(templates, templates, logger, serviceConfigController)
 		web.DeployRoute(router, logger, deployController, clientFactory)
 	}
@@ -78,9 +79,9 @@ func main() {
 	{
 		web.Templates(router, templates)
 	}
-	// lastAction setup
+	// LastOperation setup
 	{
-		web.LastAction(router, statusRetriever)
+		web.LastOperation(router, statusRetriever, logger)
 	}
 	//http handler
 	{

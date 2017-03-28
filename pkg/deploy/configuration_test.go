@@ -24,7 +24,6 @@ func (msp *mockStatusPublisher) Publish(key string, status deploy.ConfigurationS
 	fmt.Println("status", msp.Statuses)
 	return nil
 }
-func (msp *mockStatusPublisher) Finish(key string) {}
 
 func TestConfigure(t *testing.T) {
 	t.Skip("STILL NEED TO WRITE THIS TEST ")

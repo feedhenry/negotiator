@@ -17,6 +17,8 @@ import (
 	k8api "k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/apis/batch"
 
+	"strings"
+
 	"github.com/feedhenry/negotiator/pkg/log"
 	roapi "github.com/openshift/origin/pkg/route/api"
 	"k8s.io/kubernetes/pkg/watch"
@@ -92,6 +94,10 @@ type Dispatched struct {
 	BuildURL string `json:"buildURL"`
 
 	DeploymentName string `json:"deploymentName"`
+	//instanceID is used to identify a particular service instance. It is set as the namespace + deploymentName for the service
+	InstanceID string `json:"instanceID"`
+	//Operation can be provision/deprovision/update/
+	Operation string `json:"operation"`
 }
 
 // Target is part of a Payload to deploy it is the target OSCP
@@ -146,7 +152,6 @@ const templateCacheRedis = "cache-redis"
 const templateDataMongo = "data-mongo"
 const templateDataMysql = "data-mysql"
 
-
 type environmentServices []string
 
 func (es environmentServices) isEnvironmentService(name string) bool {
@@ -191,7 +196,7 @@ func (p Payload) Validate(template string) error {
 // ServiceConfigFactory creates service configs
 // todo: improve this comment
 type ServiceConfigFactory interface {
-	Factory(serviceName string) Configurer
+	Factory(serviceName string, config *Configuration) Configurer
 	Publisher(publisher StatusPublisher)
 }
 
@@ -203,6 +208,10 @@ func New(tl TemplateLoader, td TemplateDecoder, logger log.Logger, configuration
 		Logger:                  logger,
 		ConfigurationController: configuration,
 	}
+}
+
+func InstanceID(d *dc.DeploymentConfig) string {
+	return strings.Join([]string{d.Namespace, d.Name}, ":")
 }
 
 // Template deploys a set of objects based on an OSCP Template Object. Templates are located in resources/templates
@@ -266,14 +275,16 @@ func (c Controller) Template(client Client, template, nameSpace string, payload 
 		if err != nil {
 			return nil, errors.Wrap(err, "Error updating deploy: ")
 		}
-		c.ConfigurationController.Configure(client, dispatched.DeploymentName, nameSpace)
+		configurationDetails := &Configuration{Action: "provision", DeploymentName: dispatched.DeploymentName, InstanceID: dispatched.InstanceID, NameSpace: nameSpace}
+		c.ConfigurationController.Configure(client, configurationDetails)
 		return instansiateBuild()
 	}
 	dispatched, err = c.create(client, osTemplate, nameSpace, payload)
 	if err != nil {
 		return nil, err
 	}
-	c.ConfigurationController.Configure(client, dispatched.DeploymentName, nameSpace)
+	configurationDetails := &Configuration{Action: "provision", DeploymentName: dispatched.DeploymentName, InstanceID: dispatched.InstanceID, NameSpace: nameSpace}
+	c.ConfigurationController.Configure(client, configurationDetails)
 	return instansiateBuild()
 
 }
@@ -291,7 +302,9 @@ func (c Controller) create(client Client, template *Template, nameSpace string, 
 			if err != nil {
 				return nil, err
 			}
-			dispatched.DeploymentName = deployed.GetName()
+			dispatched.DeploymentName = deployed.Name
+			dispatched.InstanceID = InstanceID(deployed)
+			dispatched.Operation = "provision"
 		case *k8api.Service:
 			if _, err := client.CreateServiceInNamespace(nameSpace, ob.(*k8api.Service)); err != nil {
 				return nil, err
@@ -342,7 +355,9 @@ func (c Controller) update(client Client, d *dc.DeploymentConfig, b *bc.BuildCon
 			if err != nil {
 				return nil, errors.Wrap(err, "error updating deploy config: ")
 			}
-			dispatched.DeploymentName = deployed.GetName()
+			dispatched.DeploymentName = deployed.Name
+			dispatched.InstanceID = InstanceID(deployed)
+			dispatched.Operation = "provision"
 		case *bc.BuildConfig:
 			ob.(*bc.BuildConfig).SetResourceVersion(b.GetResourceVersion())
 			if _, err := client.UpdateBuildConfigInNamespace(nameSpace, ob.(*bc.BuildConfig)); err != nil {

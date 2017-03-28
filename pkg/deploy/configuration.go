@@ -31,6 +31,11 @@ func (lsp LogStatusPublisher) Publish(confifJobID string, status ConfigurationSt
 	return nil
 }
 
+// StatusKey returns a key for logging information against
+func StatusKey(instanceID, operation string) string {
+	return strings.Join([]string{instanceID, operation}, ":")
+}
+
 // ConfigurationFactory is responsible for finding the right implementation of the Configurer interface and returning it to all the configuration of the environment
 type ConfigurationFactory struct {
 	StatusPublisher StatusPublisher
@@ -44,23 +49,26 @@ func (cf *ConfigurationFactory) Publisher(publisher StatusPublisher) {
 }
 
 // Factory is called to get a new Configurer based on the service type
-func (cf *ConfigurationFactory) Factory(service string) Configurer {
+func (cf *ConfigurationFactory) Factory(service string, config *Configuration) Configurer {
 	switch service {
 	case templateCacheRedis:
 		return &CacheRedisConfigure{
 			StatusPublisher: cf.StatusPublisher,
+			statusKey:       StatusKey(config.InstanceID, config.Action),
 		}
 	case templateDataMongo:
 		return &DataMongoConfigure{
 			StatusPublisher: cf.StatusPublisher,
 			TemplateLoader:  cf.TemplateLoader,
 			logger:          cf.Logger,
+			statusKey:       StatusKey(config.InstanceID, config.Action),
 		}
 	case templateDataMysql:
 		return &DataMysqlConfigure{
 			StatusPublisher: cf.StatusPublisher,
 			TemplateLoader:  cf.TemplateLoader,
 			logger:          cf.Logger,
+			statusKey:       StatusKey(config.InstanceID, config.Action),
 		}
 	}
 
@@ -117,18 +125,27 @@ func genPass(length int) string {
 }
 
 const (
-	configInProgress = "inProgress"
-	configError      = "error"
-	configComplete   = "complete"
+	configInProgress = "in progress"
+	configError      = "failed"
+	configComplete   = "succeeded"
 )
 
+// Configuration encapsulates information needed to configure a service
+type Configuration struct {
+	DeploymentName string
+	NameSpace      string
+	Action         string
+	InstanceID     string
+}
+
 // Configure is called to configure the DeploymentConfig of a service that is currently being deployed
-func (cac *EnvironmentServiceConfigController) Configure(client Client, deploymentName, namespace string) error {
+func (cac *EnvironmentServiceConfigController) Configure(client Client, config *Configuration) error {
 	//cloudapp deployment config should be in place at this point, but check
+	deploymentName := config.DeploymentName
+	namespace := config.NameSpace
 	var configurationStatus = ConfigurationStatus{Started: time.Now(), Log: []string{"starting configuration for service " + deploymentName}, Status: configInProgress}
-	key := namespace + "/" + deploymentName
-	cac.StatusPublisher.Publish(key, configurationStatus)
-	var statusUpdate = func(message, status string) {
+
+	var statusUpdate = func(key, message, status string) {
 		configurationStatus.Status = status
 		configurationStatus.Log = append(configurationStatus.Log, message)
 		cac.StatusPublisher.Publish(key, configurationStatus)
@@ -136,19 +153,19 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, deployme
 	// ensure we have the latest DeploymentConfig
 	deployment, err := client.GetDeploymentConfigByName(namespace, deploymentName)
 	if err != nil {
-		statusUpdate("unexpected error retrieving DeploymentConfig"+err.Error(), configError)
-		return err
+		return errors.Wrap(err, "unexpected error retrieving DeployConfig for deployment "+deploymentName)
 	}
 	if deployment == nil {
-		statusUpdate("could not find DeploymentConfig for "+deploymentName, configError)
 		return errors.New("could not find DeploymentConfig for " + deploymentName)
 	}
+	statusKey := StatusKey(config.InstanceID, config.Action)
 	//find the deployed services
 	services, err := client.FindDeploymentConfigsByLabel(namespace, map[string]string{"rhmap/type": "environmentService"})
 	if err != nil {
-		statusUpdate("failed to retrieve environment Service dcs during configuration of  "+deployment.Name+" "+err.Error(), "error")
+		statusUpdate(statusKey, "failed to retrieve environment Service dcs during configuration of  "+deployment.Name+" "+err.Error(), "error")
 		return err
 	}
+	statusUpdate(statusKey, fmt.Sprintf("found %v services", len(services)), configInProgress)
 	errs := []string{}
 	//configure for any environment services already deployed
 	// ensure not to call configure multiple times for instance when mongo replica set present
@@ -158,8 +175,9 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, deployme
 		if _, ok := configured[serviceName]; ok {
 			continue
 		}
+		statusUpdate(statusKey, "configuring "+serviceName, configInProgress)
 		configured[serviceName] = true
-		c := cac.ConfigurationFactory.Factory(serviceName)
+		c := cac.ConfigurationFactory.Factory(serviceName, config)
 		_, err := c.Configure(client, deployment, namespace)
 		if err != nil {
 			errs = append(errs, err.Error())
@@ -178,17 +196,18 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, deployme
 // CacheRedisConfigure is a Configurer for the cache service
 type CacheRedisConfigure struct {
 	StatusPublisher StatusPublisher
+	statusKey       string
 }
 
 // Configure configures the current DeploymentConfig with the need configuration to use cache
 func (c *CacheRedisConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
-	var configurationStatus = ConfigurationStatus{Started: time.Now(), Log: []string{"starting configuration"}, Status: configInProgress}
-	c.StatusPublisher.Publish(deployment.GetResourceVersion(), configurationStatus)
+	var configurationStatus = ConfigurationStatus{Started: time.Now(), Log: []string{""}, Status: configInProgress}
 	var statusUpdate = func(message, status string) {
 		configurationStatus.Status = status
 		configurationStatus.Log = append(configurationStatus.Log, message)
-		c.StatusPublisher.Publish(deployment.GetResourceVersion(), configurationStatus)
+		c.StatusPublisher.Publish(c.statusKey, configurationStatus)
 	}
+	statusUpdate("starting configuration of cache ", configInProgress)
 	if v, ok := deployment.Labels["rhmap/name"]; ok {
 		if v == "cache" {
 			statusUpdate("no need to configure own DeploymentConfig ", configComplete)
@@ -212,6 +231,7 @@ func (c *CacheRedisConfigure) Configure(client Client, deployment *dc.Deployment
 // DataMongoConfigure is a object for configuring mongo connection strings
 type DataMongoConfigure struct {
 	StatusPublisher StatusPublisher
+	statusKey       string
 	TemplateLoader  TemplateLoader
 	status          *ConfigurationStatus
 	logger          log.Logger
@@ -220,6 +240,7 @@ type DataMongoConfigure struct {
 // DataMysqlConfigure is a object for configuring mysql connection variables
 type DataMysqlConfigure struct {
 	StatusPublisher StatusPublisher
+	statusKey       string
 	TemplateLoader  TemplateLoader
 	status          *ConfigurationStatus
 	logger          log.Logger
@@ -239,7 +260,7 @@ func (d *DataMongoConfigure) statusUpdate(key, message, status string) {
 // Configure takes an apps DeployConfig and sets of a job to create a new user and database in the mongodb data service. It also sets the expected env var FH_MONGODB_CONN_URL on the apps DeploymentConfig so it can be used to connect to the data service
 func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
 	esName := "data-mongo"
-	d.statusUpdate(deployment.Name, "starting configuration of data service for "+deployment.Name, configInProgress)
+	d.statusUpdate(d.statusKey, "starting configuration of data service for "+deployment.Name, configInProgress)
 	if v, ok := deployment.Labels["rhmap/name"]; ok {
 		if v == esName {
 			d.statusUpdate(deployment.Name, "no need to configure data-mongo DeploymentConfig ", configComplete)
@@ -256,31 +277,31 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 	// look for the Job if it already exists no need to run it again
 	existingJob, err := client.FindJobByName(namespace, deployment.Name+"-dataconfig-job")
 	if err != nil {
-		d.statusUpdate(deployment.Name, "error finding existing Job "+err.Error(), "error")
+		d.statusUpdate(d.statusKey, "error finding existing Job "+err.Error(), "error")
 		return deployment, nil
 	}
 	if existingJob != nil {
-		d.statusUpdate(deployment.Name, "configuration job "+deployment.Name+"-dataconfig-job already exists. No need to run again ", "complete")
+		d.statusUpdate(d.statusKey, "configuration job "+deployment.Name+"-dataconfig-job already exists. No need to run again ", "complete")
 		return deployment, nil
 	}
 	dataDc, err := client.FindDeploymentConfigsByLabel(namespace, map[string]string{"rhmap/name": esName})
 	if err != nil {
-		d.statusUpdate(deployment.Name, "failed to find data DeploymentConfig. Cannot continue "+err.Error(), configError)
+		d.statusUpdate(d.statusKey, "failed to find data DeploymentConfig. Cannot continue "+err.Error(), configError)
 		return nil, err
 	}
 	if len(dataDc) == 0 {
 		err := errors.New("no data DeploymentConfig exists. Cannot continue")
-		d.statusUpdate(deployment.Name, err.Error(), configError)
+		d.statusUpdate(d.statusKey, err.Error(), configError)
 		return nil, err
 	}
 	dataService, err := client.FindServiceByLabel(namespace, map[string]string{"rhmap/name": esName})
 	if err != nil {
-		d.statusUpdate(deployment.Name, "failed to find data service cannot continue "+err.Error(), configError)
+		d.statusUpdate(d.statusKey, "failed to find data service cannot continue "+err.Error(), configError)
 		return nil, err
 	}
 	if len(dataService) == 0 {
 		err := errors.New("no service for data found. Cannot continue")
-		d.statusUpdate(deployment.Name, err.Error(), configError)
+		d.statusUpdate(d.statusKey, err.Error(), configError)
 		return nil, err
 	}
 	// if we get this far then the job does not exists so we will run another one which will update the FH_MONGODB_CONN_URL and create or update any database and user password definitions
@@ -299,7 +320,7 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 	}
 	if !foundAdminPassword {
 		err := errors.New("expected to find an admin password but there was non present")
-		d.statusUpdate(deployment.Name, err.Error(), configError)
+		d.statusUpdate(d.statusKey, err.Error(), configError)
 		return nil, err
 	}
 	jobOpts["dbhost"] = dataService[0].GetName()
@@ -332,24 +353,24 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 
 	tpl, err := d.TemplateLoader.Load("data-mongo-job")
 	if err != nil {
-		d.statusUpdate(deployment.Name, "failed to load job template "+err.Error(), configError)
+		d.statusUpdate(d.statusKey, "failed to load job template "+err.Error(), configError)
 		return nil, errors.Wrap(err, "failed to load template data-mongo-job ")
 	}
 	var buf bytes.Buffer
 	if err := tpl.ExecuteTemplate(&buf, "data-mongo-job", jobOpts); err != nil {
 		err = errors.Wrap(err, "failed to execute template: ")
-		d.statusUpdate(deployment.Name, err.Error(), configError)
+		d.statusUpdate(d.statusKey, err.Error(), configError)
 		return nil, err
 	}
 	j := &batch.Job{}
 	if err := runtime.DecodeInto(k8api.Codecs.UniversalDecoder(), buf.Bytes(), j); err != nil {
 		err = errors.Wrap(err, "failed to Decode job")
-		d.statusUpdate(deployment.Name, err.Error(), "error")
+		d.statusUpdate(d.statusKey, err.Error(), "error")
 		return nil, err
 	}
 	w, err := client.CreateJobToWatch(j, namespace)
 	if err != nil {
-		d.statusUpdate(deployment.Name, "failed to CreateJobToWatch "+err.Error(), configError)
+		d.statusUpdate(d.statusKey, "failed to CreateJobToWatch "+err.Error(), configError)
 		return nil, err
 	}
 	//set off job and watch it till complete
@@ -364,16 +385,16 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 					w.Stop()
 					for _, condition := range j.Status.Conditions {
 						if condition.Reason == "DeadlineExceeded" && condition.Type == "Failed" {
-							d.statusUpdate(deployment.Name, "configuration job  timed out and failed to configure database  "+condition.Message, configError)
+							d.statusUpdate(d.statusKey, "configuration job  timed out and failed to configure database  "+condition.Message, configError)
 							//TODO Maybe we should delete the job a this point to allow it to be retried.
 						} else if condition.Type == "Complete" {
-							d.statusUpdate(deployment.Name, "configuration job succeeded ", configComplete)
+							d.statusUpdate(d.statusKey, "configuration job succeeded ", configComplete)
 						}
 					}
 				}
-				d.statusUpdate(deployment.Name, fmt.Sprintf("job status succeeded %d failed %d", j.Status.Succeeded, j.Status.Failed), configInProgress)
+				d.statusUpdate(d.statusKey, fmt.Sprintf("job status succeeded %d failed %d", j.Status.Succeeded, j.Status.Failed), configInProgress)
 			case watch.Error:
-				d.statusUpdate(deployment.Name, " data-mongo configuration job error ", configError)
+				d.statusUpdate(d.statusKey, " data-mongo configuration job error ", configError)
 				//TODO maybe pull back the log from the pod here? also remove the job in this condition so it can be retried
 				w.Stop()
 			}
@@ -397,41 +418,41 @@ func (d *DataMysqlConfigure) statusUpdate(key, message, status string) {
 
 // Configure the mysql connection vars here
 func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
-	d.statusUpdate(deployment.Name, "starting configuration of data service for "+deployment.Name, configInProgress)
+	d.statusUpdate(d.statusKey, "starting configuration of data service for "+deployment.Name, configInProgress)
 	if v, ok := deployment.Labels["rhmap/name"]; ok {
 		if v == templateDataMysql {
-			d.statusUpdate(deployment.Name, "no need to configure data-mysql DeploymentConfig ", configComplete)
+			d.statusUpdate(d.statusKey, "no need to configure data-mysql DeploymentConfig ", configComplete)
 			return deployment, nil
 		}
 	}
 	dataDc, err := client.FindDeploymentConfigsByLabel(namespace, map[string]string{"rhmap/name": templateDataMysql})
 	if err != nil {
-		d.statusUpdate(deployment.Name, "failed to find data DeploymentConfig. Cannot continue "+err.Error(), configError)
+		d.statusUpdate(d.statusKey, "failed to find data DeploymentConfig. Cannot continue "+err.Error(), configError)
 		return nil, err
 	}
 	if len(dataDc) == 0 {
 		err := errors.New("no data DeploymentConfig exists. Cannot continue")
-		d.statusUpdate(deployment.Name, err.Error(), configError)
+		d.statusUpdate(d.statusKey, err.Error(), configError)
 		return nil, err
 	}
 	// look for the Job if it already exists no need to run it again
 	existingJob, err := client.FindJobByName(namespace, deployment.Name+"-dataconfig-job")
 	if err != nil {
-		d.statusUpdate(deployment.Name, "error finding existing Job "+err.Error(), "error")
+		d.statusUpdate(d.statusKey, "error finding existing Job "+err.Error(), "error")
 		return deployment, nil
 	}
 	if existingJob != nil {
-		d.statusUpdate(deployment.Name, "configuration job "+deployment.Name+"-dataconfig-job already exists. No need to run again ", "complete")
+		d.statusUpdate(d.statusKey, "configuration job "+deployment.Name+"-dataconfig-job already exists. No need to run again ", "complete")
 		return deployment, nil
 	}
 	dataService, err := client.FindServiceByLabel(namespace, map[string]string{"rhmap/name": templateDataMysql})
 	if err != nil {
-		d.statusUpdate(deployment.Name, "failed to find data service cannot continue "+err.Error(), configError)
+		d.statusUpdate(d.statusKey, "failed to find data service cannot continue "+err.Error(), configError)
 		return nil, err
 	}
 	if len(dataService) == 0 {
 		err := errors.New("no service for data found. Cannot continue")
-		d.statusUpdate(deployment.Name, err.Error(), configError)
+		d.statusUpdate(d.statusKey, err.Error(), configError)
 		return nil, err
 	}
 	jobOpts := map[string]interface{}{}
@@ -448,7 +469,7 @@ func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentC
 	}
 	if !found {
 		err := errors.New("expected to find an env var: MYSQL_ROOT_PASSWORD but it was not present")
-		d.statusUpdate(deployment.Name, err.Error(), configError)
+		d.statusUpdate(d.statusKey, err.Error(), configError)
 		return nil, err
 	}
 
@@ -494,26 +515,26 @@ func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentC
 	}
 	tpl, err := d.TemplateLoader.Load(jobName)
 	if err != nil {
-		d.statusUpdate(deployment.Name, "failed to load job template "+err.Error(), configError)
+		d.statusUpdate(d.statusKey, "failed to load job template "+err.Error(), configError)
 		return nil, errors.Wrap(err, "failed to load template "+jobName)
 	}
 	var buf bytes.Buffer
 	if err := tpl.ExecuteTemplate(&buf, jobName, jobOpts); err != nil {
 		err = errors.Wrap(err, "failed to execute template: ")
-		d.statusUpdate(deployment.Name, err.Error(), configError)
+		d.statusUpdate(d.statusKey, err.Error(), configError)
 		return nil, err
 	}
 	j := &batch.Job{}
 	if err := runtime.DecodeInto(k8api.Codecs.UniversalDecoder(), buf.Bytes(), j); err != nil {
 		err = errors.Wrap(err, "failed to Decode job")
-		d.statusUpdate(deployment.Name, err.Error(), "error")
+		d.statusUpdate(d.statusKey, err.Error(), "error")
 		return nil, err
 	}
 	//set off job and watch it till complete
 	go func() {
 		w, err := client.CreateJobToWatch(j, namespace)
 		if err != nil {
-			d.statusUpdate(deployment.Name, "failed to CreateJobToWatch "+err.Error(), configError)
+			d.statusUpdate(d.statusKey, "failed to CreateJobToWatch "+err.Error(), configError)
 			return
 		}
 		result := w.ResultChan()
@@ -522,18 +543,18 @@ func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentC
 			case watch.Added, watch.Modified:
 				j := ws.Object.(*batch.Job)
 				if j.Status.Succeeded >= 1 {
-					d.statusUpdate(deployment.Name, "configuration job succeeded ", configComplete)
+					d.statusUpdate(d.statusKey, "configuration job succeeded ", configComplete)
 					w.Stop()
 				}
-				d.statusUpdate(deployment.Name, fmt.Sprintf("job status succeeded %d failed %d", j.Status.Succeeded, j.Status.Failed), configInProgress)
+				d.statusUpdate(d.statusKey, fmt.Sprintf("job status succeeded %d failed %d", j.Status.Succeeded, j.Status.Failed), configInProgress)
 				for _, condition := range j.Status.Conditions {
 					if condition.Reason == "DeadlineExceeded" {
-						d.statusUpdate(deployment.Name, "configuration job failed to configure database in time "+condition.Message, configError)
+						d.statusUpdate(d.statusKey, "configuration job failed to configure database in time "+condition.Message, configError)
 						w.Stop()
 					}
 				}
 			case watch.Error:
-				d.statusUpdate(deployment.Name, " data configuration job error ", configError)
+				d.statusUpdate(d.statusKey, " data configuration job error ", configError)
 				w.Stop()
 			}
 

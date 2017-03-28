@@ -63,8 +63,8 @@ func Templates(r *mux.Router, templateLoader deploy.TemplateLoader) {
 	r.Handle("/service/templates", prometheus.InstrumentHandlerFunc("getTemplates", templateHandler.List)).Methods("GET")
 }
 
-// LastAction sets up the lastActionHandler and route that is used to retrieve the last action and status of an action performed on a service
-func LastAction(r *mux.Router, statusRet StatusRetriever, logger log.Logger) {
-	lastActionHandler := NewLastActionHandler(statusRet, logger)
-	r.Handle("/v2/service_instances/{instance_id}/last_operation", prometheus.InstrumentHandlerFunc("lastActionHandler", lastActionHandler.LastAction))
+// LastOperation sets up the LastOperationHandler and route that is used to retrieve the last operation and status of an operation performed on a service
+func LastOperation(r *mux.Router, statusRet StatusRetriever, logger log.Logger) {
+	lastOperationHandler := NewLastOperationHandler(statusRet, logger)
+	r.Handle("/v2/service_instances/{instance_id}/last_operation", prometheus.InstrumentHandlerFunc("lastOperationHandler", lastOperationHandler.LastAction))
 }

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"strings"
-
 	"github.com/feedhenry/negotiator/pkg/deploy"
 	"github.com/feedhenry/negotiator/pkg/log"
 	"github.com/feedhenry/negotiator/pkg/status"
@@ -17,29 +15,26 @@ type StatusRetriever interface {
 	Get(key string) (*deploy.ConfigurationStatus, error)
 }
 
-type LastActionHandler struct {
+type LastOperationHandler struct {
 	statusRetriever StatusRetriever
 	logger          log.Logger
 }
 
-func NewLastActionHandler(statusRet StatusRetriever, logger log.Logger) LastActionHandler {
-	return LastActionHandler{
+func NewLastOperationHandler(statusRet StatusRetriever, logger log.Logger) LastOperationHandler {
+	return LastOperationHandler{
 		statusRetriever: statusRet,
 		logger:          logger,
 	}
 }
-func (lah LastActionHandler) LastAction(rw http.ResponseWriter, req *http.Request) {
+func (lah LastOperationHandler) LastAction(rw http.ResponseWriter, req *http.Request) {
 	params := mux.Vars(req)
 	instance := params["instance_id"]
-	planID := params["plan_id"]      // not currently used
-	operation := params["operation"] // provision, update , deprovision
-	if planID == "" {
-		planID = "noplan"
-	}
-	statusKey := strings.Join([]string{instance, planID, operation}, ":")
+	//planID := params["plan_id"]      // not currently used
+	operation := req.URL.Query().Get("operation")
+	statusKey := deploy.StatusKey(instance, operation)
 	status, err := lah.statusRetriever.Get(statusKey)
 	if err != nil {
-		lah.handleError(err, "failed to retrieve status", rw)
+		lah.handleError(err, "failed to retrieve status ", rw)
 		return
 	}
 	encoder := json.NewEncoder(rw)
@@ -50,9 +45,9 @@ func (lah LastActionHandler) LastAction(rw http.ResponseWriter, req *http.Reques
 
 }
 
-func (lah LastActionHandler) handleError(err error, msg string, rw http.ResponseWriter) {
+func (lah LastOperationHandler) handleError(err error, msg string, rw http.ResponseWriter) {
 	switch err.(type) {
-	case *status.ErrNotExist:
+	case status.ErrNotExist:
 		rw.WriteHeader(http.StatusNotFound)
 		rw.Write([]byte(msg + err.Error()))
 		return

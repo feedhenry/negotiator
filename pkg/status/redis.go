@@ -31,6 +31,9 @@ func New(client *redis.Client) *RedisRetrieverPublisher {
 func (rp *RedisRetrieverPublisher) Get(key string) (*deploy.ConfigurationStatus, error) {
 	var ret = deploy.ConfigurationStatus{}
 	val, err := rp.Client.Get(key).Result()
+	if err == redis.Nil {
+		return nil, ErrNotExist("status not found for key " + key)
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to Get key "+key+" in RedisRetreiverPublisher")
 	}
@@ -42,7 +45,11 @@ func (rp *RedisRetrieverPublisher) Get(key string) (*deploy.ConfigurationStatus,
 
 // Publish will update a given status atomically
 func (rp *RedisRetrieverPublisher) Publish(key string, status deploy.ConfigurationStatus) error {
-	if _, err := rp.GetSet(key, status).Result(); err != nil {
+	data, err := json.Marshal(status)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal json for storing in redis")
+	}
+	if _, err := rp.GetSet(key, string(data)).Result(); err != nil {
 		return errors.Wrap(err, "failed to publish status update")
 	}
 	return nil
