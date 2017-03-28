@@ -44,12 +44,25 @@ func TestDeploy(t *testing.T) {
 		{
 			TestName:    "test deploy cache",
 			ExpectError: false,
+			Returns: map[string]interface{}{
+				"CreateDeployConfigInNamespace": &dcapi.DeploymentConfig{
+					ObjectMeta: api.ObjectMeta{
+						Name:      "cacheservice",
+						Namespace: "test",
+					},
+				},
+			},
 			Calls: map[string]int{
 				"CreateDeployConfigInNamespace": 1,
 				"CreateServiceInNamespace":      1,
 			},
 			DispactchedAssert: func(d *deploy.Dispatched) error {
-				t.Log("dispatch assert", d.InstanceID, d.Operation)
+				if d.InstanceID != "test:cacheservice" {
+					return fmt.Errorf("expected InstanceID to match %s but got %s", "test:cacheservice", d.InstanceID)
+				}
+				if d.Operation != "provision" {
+					return fmt.Errorf("expected operation to be provision but got %s ", d.Operation)
+				}
 				return nil
 			},
 			ClientAsserts: map[string]func(interface{}) error{
@@ -108,7 +121,12 @@ func TestDeploy(t *testing.T) {
 			},
 			ExpectError: false,
 			DispactchedAssert: func(d *deploy.Dispatched) error {
-
+				if d.InstanceID != "test:cloudapp" {
+					return fmt.Errorf("expected the instanceID to be %s but got %s ", "test:cloudapp", d.InstanceID)
+				}
+				if d.Operation != "provision" {
+					return fmt.Errorf("expected operation to be provision but got %s ", d.Operation)
+				}
 				return nil
 			},
 			Template:  "cloudapp",
@@ -180,7 +198,6 @@ func TestDeploy(t *testing.T) {
 				"FindDeploymentConfigsByLabel": []dcapi.DeploymentConfig{{ObjectMeta: api.ObjectMeta{Name: "test"}}},
 			},
 			DispactchedAssert: func(d *deploy.Dispatched) error {
-				t.Log("dispatch assert", d.InstanceID, d.Operation)
 				return nil
 			},
 			ExpectError: false,
@@ -227,8 +244,21 @@ func TestDeploy(t *testing.T) {
 			},
 			Template:  "data-mongo",
 			NameSpace: "test",
+			Returns: map[string]interface{}{
+				"CreateDeployConfigInNamespace": &dcapi.DeploymentConfig{
+					ObjectMeta: api.ObjectMeta{
+						Name:      "data",
+						Namespace: "test",
+					},
+				},
+			},
 			DispactchedAssert: func(d *deploy.Dispatched) error {
-				t.Log("dispatch assert", d.InstanceID, d.Operation)
+				if d.InstanceID != "test:data" {
+					return fmt.Errorf("expected the instanceID to be %s but got %s ", "test:data", d.InstanceID)
+				}
+				if d.Operation != "provision" {
+					return fmt.Errorf("expected operation to be provision but got %s ", d.Operation)
+				}
 				return nil
 			},
 			Payload: &deploy.Payload{
@@ -258,7 +288,6 @@ func TestDeploy(t *testing.T) {
 				"CreatePersistentVolumeClaim":   1,
 			},
 			DispactchedAssert: func(d *deploy.Dispatched) error {
-				t.Log("dispatch assert", d.InstanceID, d.Operation)
 				return nil
 			},
 			ClientAsserts: map[string]func(interface{}) error{

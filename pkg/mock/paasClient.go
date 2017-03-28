@@ -227,7 +227,7 @@ func (pc PassClient) CreateDeployConfigInNamespace(namespace string, d *dcapi.De
 		ret = pc.Returns["CreateDeployConfigInNamespace"].(*dcapi.DeploymentConfig)
 	}
 	if assert, ok := pc.Asserts["CreateDeployConfigInNamespace"]; ok {
-		return d, assert(d)
+		return ret, assert(d)
 	}
 	return ret, nil
 }
