@@ -19,6 +19,8 @@ import (
 
 	"strings"
 
+	"sync"
+
 	"github.com/feedhenry/negotiator/pkg/log"
 	roapi "github.com/openshift/origin/pkg/route/api"
 	"k8s.io/kubernetes/pkg/watch"
@@ -68,6 +70,7 @@ type Controller struct {
 	TemplateDecoder         TemplateDecoder
 	Logger                  log.Logger
 	ConfigurationController *EnvironmentServiceConfigController
+	statusPublisher         StatusPublisher
 }
 
 // Payload represents a deployment payload
@@ -196,22 +199,23 @@ func (p Payload) Validate(template string) error {
 // ServiceConfigFactory creates service configs
 // todo: improve this comment
 type ServiceConfigFactory interface {
-	Factory(serviceName string, config *Configuration) Configurer
+	Factory(serviceName string, config *Configuration, wait *sync.WaitGroup) Configurer
 	Publisher(publisher StatusPublisher)
 }
 
 // New returns a new Controller
-func New(tl TemplateLoader, td TemplateDecoder, logger log.Logger, configuration *EnvironmentServiceConfigController) *Controller {
+func New(tl TemplateLoader, td TemplateDecoder, logger log.Logger, configuration *EnvironmentServiceConfigController, statusPublisher StatusPublisher) *Controller {
 	return &Controller{
 		templateLoader:          tl,
 		TemplateDecoder:         td,
 		Logger:                  logger,
 		ConfigurationController: configuration,
+		statusPublisher:         statusPublisher,
 	}
 }
 
-func InstanceID(d *dc.DeploymentConfig) string {
-	return strings.Join([]string{d.Namespace, d.Name}, ":")
+func InstanceID(namespace, serviceName string) string {
+	return strings.Join([]string{namespace, serviceName}, ":")
 }
 
 // Template deploys a set of objects based on an OSCP Template Object. Templates are located in resources/templates
@@ -219,7 +223,10 @@ func (c Controller) Template(client Client, template, nameSpace string, payload 
 	var (
 		buf        bytes.Buffer
 		dispatched *Dispatched
+		instanceID string
+		operation  = "provision"
 	)
+
 	// wrap up the logic for instansiating a build or not
 	instansiateBuild := func() (*Dispatched, error) {
 
@@ -246,6 +253,14 @@ func (c Controller) Template(client Client, template, nameSpace string, payload 
 	if err := payload.Validate(template); err != nil {
 		return nil, err
 	}
+	instanceID = InstanceID(nameSpace, payload.ServiceName)
+	statusKey := StatusKey(instanceID, operation)
+	if err := c.statusPublisher.Clear(statusKey); err != nil {
+		c.Logger.Error("failed to clear status key " + statusKey + " continuing")
+	}
+	if err := c.statusPublisher.Publish(statusKey, configInProgress, "starting deployment of service "+payload.ServiceName); err != nil {
+		c.Logger.Error("failed to publish status key " + statusKey + " continuing")
+	}
 	tpl, err := c.templateLoader.Load(template)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to load template "+template+": ")
@@ -271,28 +286,40 @@ func (c Controller) Template(client Client, template, nameSpace string, payload 
 	}
 	//check if already deployed
 	if len(dcs) > 0 || (nil != bc && len(dcs) > 0) {
-		dispatched, err = c.update(client, &dcs[0], bc, osTemplate, nameSpace, payload)
+		if err := c.statusPublisher.Publish(statusKey, configInProgress, "service already exists updating"); err != nil {
+			c.Logger.Error("failed to publish status key " + statusKey + " continuing " + err.Error())
+		}
+		dispatched, err = c.update(client, &dcs[0], bc, osTemplate, nameSpace, instanceID, payload)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error updating deploy: ")
 		}
-		configurationDetails := &Configuration{Action: "provision", DeploymentName: dispatched.DeploymentName, InstanceID: dispatched.InstanceID, NameSpace: nameSpace}
+		dispatched.InstanceID = instanceID
+		dispatched.Operation = operation
+		configurationDetails := &Configuration{Action: operation, DeploymentName: dispatched.DeploymentName, InstanceID: dispatched.InstanceID, NameSpace: nameSpace}
 		c.ConfigurationController.Configure(client, configurationDetails)
 		return instansiateBuild()
 	}
-	dispatched, err = c.create(client, osTemplate, nameSpace, payload)
+	if err := c.statusPublisher.Publish(statusKey, configInProgress, "service does not exist creating"); err != nil {
+		c.Logger.Error("failed to publish status key " + statusKey + " continuing " + err.Error())
+	}
+	dispatched, err = c.create(client, osTemplate, nameSpace, instanceID, payload)
 	if err != nil {
+		c.statusPublisher.Publish(statusKey, configError, err.Error())
 		return nil, err
 	}
-	configurationDetails := &Configuration{Action: "provision", DeploymentName: dispatched.DeploymentName, InstanceID: dispatched.InstanceID, NameSpace: nameSpace}
+	dispatched.InstanceID = instanceID
+	dispatched.Operation = operation
+	configurationDetails := &Configuration{Action: operation, DeploymentName: dispatched.DeploymentName, InstanceID: dispatched.InstanceID, NameSpace: nameSpace}
 	c.ConfigurationController.Configure(client, configurationDetails)
 	return instansiateBuild()
 
 }
 
 // create is responsible for creating the different Objects in a template via the OSCP and kubernetes API. this is used for new deployments
-func (c Controller) create(client Client, template *Template, nameSpace string, deploy *Payload) (*Dispatched, error) {
+func (c Controller) create(client Client, template *Template, nameSpace, instanceID string, deploy *Payload) (*Dispatched, error) {
 	var (
 		dispatched = &Dispatched{}
+		statusKey  = StatusKey(instanceID, "provision")
 	)
 	for _, ob := range template.Objects {
 		switch ob.(type) {
@@ -303,48 +330,55 @@ func (c Controller) create(client Client, template *Template, nameSpace string, 
 				return nil, err
 			}
 			dispatched.DeploymentName = deployed.Name
-			dispatched.InstanceID = InstanceID(deployed)
-			dispatched.Operation = "provision"
+			c.statusPublisher.Publish(statusKey, configInProgress, "deployment created "+deployed.Name)
 		case *k8api.Service:
 			if _, err := client.CreateServiceInNamespace(nameSpace, ob.(*k8api.Service)); err != nil {
 				return nil, err
 			}
+			c.statusPublisher.Publish(statusKey, configInProgress, " created service definition ")
 		case *route.Route:
 			r, err := client.CreateRouteInNamespace(nameSpace, ob.(*route.Route))
 			if err != nil {
 				return nil, err
 			}
 			dispatched.Route = r
+			c.statusPublisher.Publish(statusKey, configInProgress, " created route definition ")
 		case *image.ImageStream:
 			if _, err := client.CreateImageStream(nameSpace, ob.(*image.ImageStream)); err != nil {
 				return nil, err
 			}
+			c.statusPublisher.Publish(statusKey, configInProgress, " created imageStream definition ")
 		case *bc.BuildConfig:
 			bConfig := ob.(*bc.BuildConfig)
 			if _, err := client.CreateBuildConfigInNamespace(nameSpace, bConfig); err != nil {
 				return nil, err
 			}
+			c.statusPublisher.Publish(statusKey, configInProgress, " created buildConfig definition ")
 		case *k8api.Secret:
 			if _, err := client.CreateSecretInNamespace(nameSpace, ob.(*k8api.Secret)); err != nil {
 				return nil, err
 			}
+			c.statusPublisher.Publish(statusKey, configInProgress, " created secret definition ")
 		case *k8api.PersistentVolumeClaim:
 			if _, err := client.CreatePersistentVolumeClaim(nameSpace, ob.(*k8api.PersistentVolumeClaim)); err != nil {
 				return nil, err
 			}
+			c.statusPublisher.Publish(statusKey, configInProgress, " created PersistentVolumeClaim definition ")
 		case *k8api.Pod:
 			if _, err := client.CreatePod(nameSpace, ob.(*k8api.Pod)); err != nil {
 				return nil, err
 			}
+			c.statusPublisher.Publish(statusKey, configInProgress, " created Pod definition ")
 		}
 	}
 	return dispatched, nil
 }
 
 // update the existing deployconfig and buildconfig with the new deployment payload data. Update the deployconfig (for env var updates),Update the buildconfig (for git repo and ref changes), Update any routes for the app
-func (c Controller) update(client Client, d *dc.DeploymentConfig, b *bc.BuildConfig, template *Template, nameSpace string, deploy *Payload) (*Dispatched, error) {
+func (c Controller) update(client Client, d *dc.DeploymentConfig, b *bc.BuildConfig, template *Template, nameSpace string, instanceID string, deploy *Payload) (*Dispatched, error) {
 	var (
 		dispatched = &Dispatched{}
+		statusKey  = StatusKey(instanceID, "provision")
 	)
 	for _, ob := range template.Objects {
 		switch ob.(type) {
@@ -356,19 +390,20 @@ func (c Controller) update(client Client, d *dc.DeploymentConfig, b *bc.BuildCon
 				return nil, errors.Wrap(err, "error updating deploy config: ")
 			}
 			dispatched.DeploymentName = deployed.Name
-			dispatched.InstanceID = InstanceID(deployed)
-			dispatched.Operation = "provision"
+			c.statusPublisher.Publish(statusKey, configInProgress, "updated DeploymentConfig")
 		case *bc.BuildConfig:
 			ob.(*bc.BuildConfig).SetResourceVersion(b.GetResourceVersion())
 			if _, err := client.UpdateBuildConfigInNamespace(nameSpace, ob.(*bc.BuildConfig)); err != nil {
 				return nil, errors.Wrap(err, "error updating build config: ")
 			}
+			c.statusPublisher.Publish(statusKey, configInProgress, "updated BuildConfig")
 		case *route.Route:
 			r, err := client.UpdateRouteInNamespace(nameSpace, ob.(*route.Route))
 			if err != nil {
 				return nil, err
 			}
 			dispatched.Route = r
+			c.statusPublisher.Publish(statusKey, configInProgress, "updated Route")
 		}
 	}
 	return dispatched, nil

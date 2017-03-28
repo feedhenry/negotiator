@@ -12,7 +12,7 @@ import (
 )
 
 type StatusRetriever interface {
-	Get(key string) (*deploy.ConfigurationStatus, error)
+	Get(key string) (*deploy.Status, error)
 }
 
 type LastOperationHandler struct {
@@ -47,7 +47,7 @@ func (lah LastOperationHandler) LastAction(rw http.ResponseWriter, req *http.Req
 
 func (lah LastOperationHandler) handleError(err error, msg string, rw http.ResponseWriter) {
 	switch err.(type) {
-	case status.ErrNotExist:
+	case *status.ErrStatusNotExist:
 		rw.WriteHeader(http.StatusNotFound)
 		rw.Write([]byte(msg + err.Error()))
 		return

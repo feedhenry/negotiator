@@ -3,16 +3,28 @@ package status
 import (
 	"encoding/json"
 
+	"time"
+
 	"github.com/feedhenry/negotiator/pkg/deploy"
 	"github.com/go-redis/redis"
 	"github.com/pkg/errors"
 )
 
 // ErrNotExist means the status does not exist
-type ErrNotExist string
+type ErrStatusNotExist struct {
+	statusKey string
+}
 
-func (ee ErrNotExist) Error() string {
-	return "error status does not exist"
+func (ene *ErrStatusNotExist) Error() string {
+	return "status not found for key " + ene.statusKey
+}
+
+func IsErrStatusNotExists(err error) bool {
+	if err == nil {
+		return false
+	}
+	_, ok := err.(*ErrStatusNotExist)
+	return ok
 }
 
 // RedisRetrieverPublisher implements the StatusPublisher and StatusRetriever interface wrapping around redis
@@ -28,11 +40,11 @@ func New(client *redis.Client) *RedisRetrieverPublisher {
 }
 
 // Get will retrieve a given status by key
-func (rp *RedisRetrieverPublisher) Get(key string) (*deploy.ConfigurationStatus, error) {
-	var ret = deploy.ConfigurationStatus{}
+func (rp *RedisRetrieverPublisher) Get(key string) (*deploy.Status, error) {
+	var ret = deploy.Status{}
 	val, err := rp.Client.Get(key).Result()
 	if err == redis.Nil {
-		return nil, ErrNotExist("status not found for key " + key)
+		return nil, &ErrStatusNotExist{statusKey: key}
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to Get key "+key+" in RedisRetreiverPublisher")
@@ -43,14 +55,24 @@ func (rp *RedisRetrieverPublisher) Get(key string) (*deploy.ConfigurationStatus,
 	return &ret, nil
 }
 
-// Publish will update a given status atomically
-func (rp *RedisRetrieverPublisher) Publish(key string, status deploy.ConfigurationStatus) error {
-	data, err := json.Marshal(status)
+func (rp *RedisRetrieverPublisher) Clear(key string) error {
+	return rp.Client.Del(key).Err()
+}
+
+// Publish will update a given status
+func (rp *RedisRetrieverPublisher) Publish(key string, status, description string) error {
+	val, err := rp.Get(key)
+	if IsErrStatusNotExists(err) {
+		val = &deploy.Status{}
+	} else if err != nil {
+		return errors.Wrap(err, "unexpected error in Publish ")
+	}
+	val.Description = description
+	val.Log = append(val.Log, description)
+	val.Status = status
+	data, err := json.Marshal(val)
 	if err != nil {
-		return errors.Wrap(err, "failed to marshal json for storing in redis")
+		return errors.Wrap(err, "failed to Marshal status in RedisRetreiverPublisher")
 	}
-	if _, err := rp.GetSet(key, string(data)).Result(); err != nil {
-		return errors.Wrap(err, "failed to publish status update")
-	}
-	return nil
+	return rp.Client.Set(key, string(data), time.Minute*20).Err()
 }

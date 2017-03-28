@@ -17,11 +17,11 @@ import (
 )
 
 type mockStatusRetriever struct {
-	status map[string]*deploy.ConfigurationStatus
+	status map[string]*deploy.Status
 	err    error
 }
 
-func (msr mockStatusRetriever) Get(key string) (*deploy.ConfigurationStatus, error) {
+func (msr mockStatusRetriever) Get(key string) (*deploy.Status, error) {
 	return msr.status[key], msr.err
 }
 
@@ -41,22 +41,22 @@ func TestGetLastOperation(t *testing.T) {
 		Operation       string
 		InstanceID      string
 		StatusCode      int
-		AssertStatus    func(cs *deploy.ConfigurationStatus) error
+		AssertStatus    func(cs *deploy.Status) error
 	}{
 		{
 			StatusCode: 200,
 			Name:       "test get last action happy",
 			Operation:  "provision",
 			InstanceID: "test",
-			AssertStatus: func(cs *deploy.ConfigurationStatus) error {
+			AssertStatus: func(cs *deploy.Status) error {
 				if cs == nil {
 					return fmt.Errorf("expected a ConfigurationStatus but got none")
 				}
 				return nil
 			},
 			StatusRetriever: mockStatusRetriever{
-				status: map[string]*deploy.ConfigurationStatus{
-					"test:provision": &deploy.ConfigurationStatus{
+				status: map[string]*deploy.Status{
+					"test:provision": &deploy.Status{
 						Status:      "success",
 						Description: "completed setup",
 						Log:         []string{},
@@ -69,21 +69,21 @@ func TestGetLastOperation(t *testing.T) {
 			Name:       "test get last action not found",
 			Operation:  "provision",
 			InstanceID: "test",
-			AssertStatus: func(cs *deploy.ConfigurationStatus) error {
+			AssertStatus: func(cs *deploy.Status) error {
 				if cs != nil {
 					return fmt.Errorf("expected no ConfigurationStatus but got one")
 				}
 				return nil
 			},
 			StatusRetriever: mockStatusRetriever{
-				status: map[string]*deploy.ConfigurationStatus{
-					"something:provision": &deploy.ConfigurationStatus{
+				status: map[string]*deploy.Status{
+					"something:provision": &deploy.Status{
 						Status:      "success",
 						Description: "completed setup",
 						Log:         []string{},
 					},
 				},
-				err: status.ErrNotExist("does not exist"),
+				err: &status.ErrStatusNotExist{},
 			},
 		},
 	}
@@ -110,7 +110,7 @@ func TestGetLastOperation(t *testing.T) {
 			if err != nil {
 				t.Fatalf("reading response from last_operation handler failed %s ", err.Error())
 			}
-			status := &deploy.ConfigurationStatus{}
+			status := &deploy.Status{}
 			if err := json.Unmarshal(data, status); err != nil {
 				t.Fatalf("unexpeted error during Unmarshal %s", err.Error())
 			}

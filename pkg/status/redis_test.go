@@ -18,16 +18,16 @@ func TestStatus(t *testing.T) {
 	}
 	cases := []struct {
 		Name               string
-		Status             deploy.ConfigurationStatus
+		Status             deploy.Status
 		ExpectGetError     bool
 		ExpectPublishError bool
 		GetKey             string
 		PubKey             string
-		Assert             func(cs *deploy.ConfigurationStatus) error
+		Assert             func(cs *deploy.Status) error
 	}{
 		{
 			Name: "test publish and get configuration status",
-			Status: deploy.ConfigurationStatus{
+			Status: deploy.Status{
 				Status:      "in progress",
 				Description: "deploying your service",
 			},
@@ -35,7 +35,7 @@ func TestStatus(t *testing.T) {
 			ExpectPublishError: false,
 			PubKey:             "test",
 			GetKey:             "test",
-			Assert: func(cs *deploy.ConfigurationStatus) error {
+			Assert: func(cs *deploy.Status) error {
 				if cs == nil {
 					return fmt.Errorf("expected a ConfigurationStatus but got none")
 				}
@@ -44,7 +44,7 @@ func TestStatus(t *testing.T) {
 		},
 		{
 			Name: "test get configuration status thats not there",
-			Status: deploy.ConfigurationStatus{
+			Status: deploy.Status{
 				Status:      "in progress",
 				Description: "deploying your service",
 			},
@@ -52,7 +52,7 @@ func TestStatus(t *testing.T) {
 			ExpectPublishError: false,
 			PubKey:             "test",
 			GetKey:             "notthere",
-			Assert: func(cs *deploy.ConfigurationStatus) error {
+			Assert: func(cs *deploy.Status) error {
 				if cs != nil {
 					return fmt.Errorf("expected NOT to get a ConfigurationStatus but got one")
 				}

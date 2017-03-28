@@ -62,7 +62,7 @@ func main() {
 			Logger:          logger,
 		}
 		serviceConfigController := deploy.NewEnvironmentServiceConfigController(serviceConfigFactory, logger, statusPublisher, templates)
-		deployController := deploy.New(templates, templates, logger, serviceConfigController)
+		deployController := deploy.New(templates, templates, logger, serviceConfigController, statusPublisher)
 		web.DeployRoute(router, logger, deployController, clientFactory)
 	}
 	// Routes setup

@@ -18,10 +18,14 @@ type mockStatusPublisher struct {
 	Statuses []string
 }
 
-func (msp *mockStatusPublisher) Publish(key string, status deploy.ConfigurationStatus) error {
+func (msp *mockStatusPublisher) Publish(key string, status deploy.Status) error {
 	fmt.Println("calling mockstatus publisher", key, status.Status)
 	msp.Statuses = append(msp.Statuses, status.Status)
 	fmt.Println("status", msp.Statuses)
+	return nil
+}
+
+func (msp *mockStatusPublisher) Clear(key string) error {
 	return nil
 }
 
