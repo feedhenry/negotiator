@@ -22,7 +22,7 @@ var DataMysqlConfigJob = `
         "containers": [
           {
             "name": "datamysqlconfig",
-            "image": "feedhenry/negotiator:0.0.9",
+            "image": "feedhenry/negotiator:0.0.10",
             "command": ["jobs",
               "datamysqlconfig",
               "--host={{if isset . "dbhost"}}{{ index . "dbhost"}}{{end}}",
