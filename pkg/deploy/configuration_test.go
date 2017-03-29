@@ -6,6 +6,9 @@ import (
 
 	"strings"
 
+	"sync"
+
+	"github.com/Sirupsen/logrus"
 	"github.com/feedhenry/negotiator/pkg/deploy"
 	"github.com/feedhenry/negotiator/pkg/mock"
 	"github.com/feedhenry/negotiator/pkg/openshift"
@@ -18,13 +21,14 @@ type mockStatusPublisher struct {
 	Statuses []string
 }
 
-func (msp *mockStatusPublisher) Publish(key string, status deploy.ConfigurationStatus) error {
-	fmt.Println("calling mockstatus publisher", key, status.Status)
-	msp.Statuses = append(msp.Statuses, status.Status)
-	fmt.Println("status", msp.Statuses)
+func (msp *mockStatusPublisher) Publish(key string, status, description string) error {
+	msp.Statuses = append(msp.Statuses, status)
 	return nil
 }
-func (msp *mockStatusPublisher) Finish(key string) {}
+
+func (msp *mockStatusPublisher) Clear(key string) error {
+	return nil
+}
 
 func TestConfigure(t *testing.T) {
 	t.Skip("STILL NEED TO WRITE THIS TEST ")
@@ -32,7 +36,7 @@ func TestConfigure(t *testing.T) {
 
 func TestCacheConfigurationJob(t *testing.T) {
 	msp := &mockStatusPublisher{}
-	cacheConfig := deploy.CacheRedisConfigure{StatusPublisher: msp}
+	cacheConfig := deploy.NewCacheRedisConfigure(msp, "testkey", &sync.WaitGroup{})
 	depConfig := []dcapi.DeploymentConfig{
 		{ObjectMeta: api.ObjectMeta{Name: "test"}, Spec: dcapi.DeploymentConfigSpec{
 			Template: &api.PodTemplateSpec{
@@ -155,11 +159,17 @@ func TestCacheConfigurationJob(t *testing.T) {
 func TestDataConfigurationJob(t *testing.T) {
 	tl := openshift.NewTemplateLoaderDecoder("../openshift/templates/")
 	msp := &mockStatusPublisher{}
+	logger := logrus.StandardLogger()
+	factory := deploy.ConfigurationFactory{
+		StatusPublisher: msp,
+		Logger:          logger,
+		TemplateLoader:  tl,
+	}
 	getDataMongoConfig := func() deploy.Configurer {
-		return &deploy.DataMongoConfigure{StatusPublisher: msp, TemplateLoader: tl}
+		return factory.Factory("data-mongo", &deploy.Configuration{InstanceID: "test", Action: "provision"}, &sync.WaitGroup{})
 	}
 	getDataMySQLConfig := func() deploy.Configurer {
-		return &deploy.DataMysqlConfigure{StatusPublisher: msp, TemplateLoader: tl}
+		return factory.Factory("data-mysql", &deploy.Configuration{InstanceID: "test", Action: "provision"}, &sync.WaitGroup{})
 	}
 
 	getMongodc := func() []dcapi.DeploymentConfig {

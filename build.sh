@@ -3,7 +3,8 @@ cd cmd/negotiator
 go build .
 cd ..
 cd ..
+cd cmd/jobs && go build . && cd ../..
 imagehash=`docker build -q .`
-docker tag $imagehash feedhenry/negotiator:0.0.8
-oc deploy --latest negotiator 
+docker tag $imagehash feedhenry/negotiator:0.0.9
+oc deploy --latest negotiator
 

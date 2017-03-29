@@ -23,7 +23,7 @@ var DataMongoTemplate = `
           "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
-          "rhmap/name": "data-mongo§",
+          "rhmap/name": "data-mongo",
           "rhmap/type":"environmentService"
         }
       },

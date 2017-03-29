@@ -1,12 +1,12 @@
 SHELL := /bin/bash
-VERSION := 0.0.8
+VERSION := 0.0.9
 NAME := negotiator
 
 # To build for a os you are not on, use:
 # make build GOOS=linux
 
-# To compile for linux, create the docker image 
-# and push it to docker.io/feedhenry/negotiator with the version specified above, use: 
+# To compile for linux, create the docker image
+# and push it to docker.io/feedhenry/negotiator with the version specified above, use:
 # make docker_build_push GOOS=linux
 
 # This is the first target, so it is the default, i.e.
@@ -64,11 +64,11 @@ vet:
 
 .PHONY: test
 test-unit:
-	go test -v --cover -cpu=2 `go list ./... | grep -v /vendor/ | grep -v /design`
+	go test -short -v --cover -cpu=2 `go list ./... | grep -v /vendor/ | grep -v /design`
 
 .PHONY: test-race
 test-race:
-    go test -v -cpu=1,2,4 -short -race `go list ./... | grep -v /vendor/`
+	go test -v -cpu=1,2,4 -short -race `go list ./... | grep -v /vendor/`
 
 .PHONY: deps
 deps:

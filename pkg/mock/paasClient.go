@@ -222,10 +222,14 @@ func (pc PassClient) CreateDeployConfigInNamespace(namespace string, d *dcapi.De
 	if e, ok := pc.Error["CreateDeployConfigInNamespace"]; ok {
 		return nil, e
 	}
-	if assert, ok := pc.Asserts["CreateDeployConfigInNamespace"]; ok {
-		return d, assert(d)
+	var ret = d
+	if pc.Returns["CreateDeployConfigInNamespace"] != nil {
+		ret = pc.Returns["CreateDeployConfigInNamespace"].(*dcapi.DeploymentConfig)
 	}
-	return d, nil
+	if assert, ok := pc.Asserts["CreateDeployConfigInNamespace"]; ok {
+		return ret, assert(d)
+	}
+	return ret, nil
 }
 
 func (pc PassClient) UpdateDeployConfigInNamespace(namespace string, d *dcapi.DeploymentConfig) (*dcapi.DeploymentConfig, error) {
@@ -233,10 +237,14 @@ func (pc PassClient) UpdateDeployConfigInNamespace(namespace string, d *dcapi.De
 	if e, ok := pc.Error["UpdateDeployConfigInNamespace"]; ok {
 		return nil, e
 	}
+	var ret = d
+	if pc.Returns["UpdateDeployConfigInNamespace"] != nil {
+		ret = pc.Returns["UpdateDeployConfigInNamespace"].(*dcapi.DeploymentConfig)
+	}
 	if assert, ok := pc.Asserts["UpdateDeployConfigInNamespace"]; ok {
 		return d, assert(d)
 	}
-	return d, nil
+	return ret, nil
 }
 
 func (pc PassClient) CreateSecretInNamespace(namespace string, s *api.Secret) (*api.Secret, error) {

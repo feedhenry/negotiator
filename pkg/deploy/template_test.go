@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"testing"
 
+	"sync"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/feedhenry/negotiator/pkg/deploy"
 	"github.com/feedhenry/negotiator/pkg/mock"
@@ -16,7 +18,7 @@ import (
 
 type mockServiceConfigFactory struct{}
 
-func (msf mockServiceConfigFactory) Factory(service string) deploy.Configurer {
+func (msf mockServiceConfigFactory) Factory(service string, config *deploy.Configuration, wait *sync.WaitGroup) deploy.Configurer {
 	return mockConfigurer{}
 }
 func (msf *mockServiceConfigFactory) Publisher(pub deploy.StatusPublisher) {
@@ -31,22 +33,41 @@ func (mc mockConfigurer) Configure(client deploy.Client, inprogress *dcapi.Deplo
 
 func TestDeploy(t *testing.T) {
 	cases := []struct {
-		TestName    string
-		Template    string
-		NameSpace   string
-		Payload     *deploy.Payload
-		Calls       map[string]int
-		Asserts     map[string]func(interface{}) error
-		Returns     map[string]interface{}
-		ExpectError bool
+		TestName          string
+		Template          string
+		NameSpace         string
+		Payload           *deploy.Payload
+		Calls             map[string]int
+		ClientAsserts     map[string]func(interface{}) error
+		DispactchedAssert func(d *deploy.Dispatched) error
+		Returns           map[string]interface{}
+		ExpectError       bool
 	}{
 		{
+			TestName:    "test deploy cache",
 			ExpectError: false,
+			Returns: map[string]interface{}{
+				"CreateDeployConfigInNamespace": &dcapi.DeploymentConfig{
+					ObjectMeta: api.ObjectMeta{
+						Name:      "cacheservice",
+						Namespace: "test",
+					},
+				},
+			},
 			Calls: map[string]int{
 				"CreateDeployConfigInNamespace": 1,
 				"CreateServiceInNamespace":      1,
 			},
-			Asserts: map[string]func(interface{}) error{
+			DispactchedAssert: func(d *deploy.Dispatched) error {
+				if d.InstanceID != "test:cacheservice" {
+					return fmt.Errorf("expected InstanceID to match %s but got %s", "test:cacheservice", d.InstanceID)
+				}
+				if d.Operation != "provision" {
+					return fmt.Errorf("expected operation to be provision but got %s ", d.Operation)
+				}
+				return nil
+			},
+			ClientAsserts: map[string]func(interface{}) error{
 				"CreateDeployConfigInNamespace": func(bc interface{}) error {
 					if nil == bc {
 						return errors.New("did not expect nil DeploymentConfig")
@@ -68,7 +89,6 @@ func TestDeploy(t *testing.T) {
 					return nil
 				},
 			},
-			TestName:  "test deploy cache",
 			Template:  "cache-redis",
 			NameSpace: "test",
 			Payload: &deploy.Payload{
@@ -91,17 +111,34 @@ func TestDeploy(t *testing.T) {
 			},
 		},
 		{
-			TestName:    "test deploy cloudapp",
-			Returns:     map[string]interface{}{"InstantiateBuild": &bc.Build{ObjectMeta: api.ObjectMeta{Name: "test"}}},
+			TestName: "test deploy cloudapp",
+			Returns: map[string]interface{}{
+				"InstantiateBuild": &bc.Build{ObjectMeta: api.ObjectMeta{Name: "test"}},
+				"CreateDeployConfigInNamespace": &dcapi.DeploymentConfig{
+					ObjectMeta: api.ObjectMeta{
+						Name:      "cloudapp",
+						Namespace: "test",
+					},
+				},
+			},
 			ExpectError: false,
-			Template:    "cloudapp",
-			NameSpace:   "test",
+			DispactchedAssert: func(d *deploy.Dispatched) error {
+				if d.InstanceID != "test:cloudapp" {
+					return fmt.Errorf("expected the instanceID to be %s but got %s ", "test:cloudapp", d.InstanceID)
+				}
+				if d.Operation != "provision" {
+					return fmt.Errorf("expected operation to be provision but got %s ", d.Operation)
+				}
+				return nil
+			},
+			Template:  "cloudapp",
+			NameSpace: "test",
 			Payload: &deploy.Payload{
 				Target: &deploy.Target{
 					Host:  "http://test.com",
 					Token: "test",
 				},
-				ServiceName:  "cacheservice",
+				ServiceName:  "cloudapp",
 				Domain:       "rhmap",
 				ProjectGUID:  "guid",
 				CloudAppGUID: "guid",
@@ -162,6 +199,9 @@ func TestDeploy(t *testing.T) {
 				"FindBuildConfigByLabel":       &bc.BuildConfig{ObjectMeta: api.ObjectMeta{Name: "test"}},
 				"FindDeploymentConfigsByLabel": []dcapi.DeploymentConfig{{ObjectMeta: api.ObjectMeta{Name: "test"}}},
 			},
+			DispactchedAssert: func(d *deploy.Dispatched) error {
+				return nil
+			},
 			ExpectError: false,
 			Template:    "cloudapp",
 			NameSpace:   "test",
@@ -206,12 +246,29 @@ func TestDeploy(t *testing.T) {
 			},
 			Template:  "data-mongo",
 			NameSpace: "test",
+			Returns: map[string]interface{}{
+				"CreateDeployConfigInNamespace": &dcapi.DeploymentConfig{
+					ObjectMeta: api.ObjectMeta{
+						Name:      "data",
+						Namespace: "test",
+					},
+				},
+			},
+			DispactchedAssert: func(d *deploy.Dispatched) error {
+				if d.InstanceID != "test:data" {
+					return fmt.Errorf("expected the instanceID to be %s but got %s ", "test:data", d.InstanceID)
+				}
+				if d.Operation != "provision" {
+					return fmt.Errorf("expected operation to be provision but got %s ", d.Operation)
+				}
+				return nil
+			},
 			Payload: &deploy.Payload{
 				Target: &deploy.Target{
 					Host:  "http://test.com",
 					Token: "test",
 				},
-				ServiceName:  "cacheservice",
+				ServiceName:  "data",
 				Domain:       "rhmap",
 				ProjectGUID:  "guid",
 				CloudAppGUID: "guid",
@@ -232,7 +289,10 @@ func TestDeploy(t *testing.T) {
 				"CreateServiceInNamespace":      1,
 				"CreatePersistentVolumeClaim":   1,
 			},
-			Asserts: map[string]func(interface{}) error{
+			DispactchedAssert: func(d *deploy.Dispatched) error {
+				return nil
+			},
+			ClientAsserts: map[string]func(interface{}) error{
 				"CreatePersistentVolumeClaim": func(pvc interface{}) error {
 					if nil == pvc {
 						return errors.New("did not expect nil PersistentVolumeClaim")
@@ -275,22 +335,29 @@ func TestDeploy(t *testing.T) {
 		},
 	}
 	tl := openshift.NewTemplateLoaderDecoder("../resources/templates/")
+	logger := logrus.StandardLogger()
+	lsp := deploy.LogStatusPublisher{Logger: logger}
 	for _, tc := range cases {
 		t.Run(tc.TestName, func(t *testing.T) {
 			pc := mock.NewPassClient()
 			if tc.Returns != nil {
 				pc.Returns = tc.Returns
 			}
-			pc.Asserts = tc.Asserts
-			sc := deploy.NewEnvironmentServiceConfigController(&mockServiceConfigFactory{}, logrus.StandardLogger(), nil, tl)
-			dc := deploy.New(tl, tl, logrus.StandardLogger(), sc)
-			_, err := dc.Template(pc, tc.Template, tc.NameSpace, tc.Payload)
+			pc.Asserts = tc.ClientAsserts
+			sc := deploy.NewEnvironmentServiceConfigController(&mockServiceConfigFactory{}, logger, nil, tl)
+			dc := deploy.New(tl, tl, logrus.StandardLogger(), sc, lsp)
+			dispatched, err := dc.Template(pc, tc.Template, tc.NameSpace, tc.Payload)
 			if !tc.ExpectError && err != nil {
 				fmt.Printf("%+v", err)
 				t.Fatal(err)
 			}
 			if tc.ExpectError && err == nil {
 				t.Fatal("expected an error but got nil")
+			}
+			if tc.DispactchedAssert != nil {
+				if err := tc.DispactchedAssert(dispatched); err != nil {
+					t.Errorf("Dispatch assert failed. Did not expect an error but got %s", err.Error())
+				}
 			}
 			for f, n := range tc.Calls {
 				if n != pc.CalledTimes(f) {
