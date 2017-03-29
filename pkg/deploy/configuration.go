@@ -246,12 +246,19 @@ func (c *CacheRedisConfigure) Configure(client Client, deployment *dc.Deployment
 	return deployment, nil
 }
 
+// PushUpsConfigure is an object for configuring push connection variables
+type PushUpsConfigure struct {
+	StatusPublisher StatusPublisher
+	TemplateLoader  TemplateLoader
+	logger          log.Logger
+	statusKey       string
+}
+
 // DataMongoConfigure is a object for configuring mongo connection strings
 type DataMongoConfigure struct {
 	StatusPublisher StatusPublisher
 	statusKey       string
 	TemplateLoader  TemplateLoader
-	status          *Status
 	logger          log.Logger
 	wait            *sync.WaitGroup
 }
@@ -261,7 +268,6 @@ type DataMysqlConfigure struct {
 	StatusPublisher StatusPublisher
 	statusKey       string
 	TemplateLoader  TemplateLoader
-	status          *Status
 	logger          log.Logger
 	wait            *sync.WaitGroup
 }
@@ -602,14 +608,9 @@ func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentC
 	return deployment, nil
 }
 
-func (p *PushUpsConfigure) statusUpdate(key, message, status string) {
-	if p.status == nil {
-		p.status = &ConfigurationStatus{Started: time.Now(), Log: []string{}}
-	}
-	p.status.Log = append(p.status.Log, message)
-	p.status.Status = status
-	if err := p.StatusPublisher.Publish(key, *p.status); err != nil {
-		p.logger.Info("failed to publish status", err.Error())
+func (p *PushUpsConfigure) statusUpdate(description, status string) {
+	if err := p.StatusPublisher.Publish(p.statusKey, status, description); err != nil {
+		p.logger.Error("failed to publish status ", err.Error())
 	}
 }
 
