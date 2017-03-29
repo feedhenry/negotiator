@@ -12,7 +12,7 @@ var DataMongoConfigJob = `
 	}
   },
   "spec": {
-	"activeDeadlineSeconds": 120,  
+	"activeDeadlineSeconds": 120,
     "template": {
       "metadata": {
         "name": "{{index . "name"}}-dataconfig-job"
@@ -22,7 +22,7 @@ var DataMongoConfigJob = `
           {
             "name": "datamongoconfig",
             "image": "feedhenry/negotiator:0.0.9",
-            "command": ["jobs",	
+            "command": ["jobs",
               "datamongoconfig",
 			  "--admin-user={{if isset . "admin-user"}}{{ index . "admin-user"}}{{end}}",
 			  "--admin-pass={{if isset . "admin-pass"}}{{ index . "admin-pass"}}{{end}}",

@@ -150,10 +150,10 @@ func (t Template) hasSecret() bool {
 }
 
 const templateCloudApp = "cloudapp"
-
 const templateCacheRedis = "cache-redis"
 const templateDataMongo = "data-mongo"
 const templateDataMysql = "data-mysql"
+const templatePushUps = "push-ups"
 
 type environmentServices []string
 
@@ -184,7 +184,6 @@ func (p Payload) Validate(template string) error {
 		if p.Repo == nil || p.Repo.Loc == "" || p.Repo.Ref == "" {
 			return ErrInvalid{message: "a repo is expected for a cloudapp"}
 		}
-
 	}
 	if p.Target == nil {
 		return ErrInvalid{message: "an oscp target is required"}
@@ -270,7 +269,7 @@ func (c Controller) Template(client Client, template, nameSpace string, payload 
 	}
 	osTemplate, err := c.TemplateDecoder.Decode(buf.Bytes())
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to decode into a os template: ")
+		return nil, errors.Wrap(err, "failed to decode into an os template: ")
 	}
 	searchCrit := map[string]string{"rhmap/name": payload.ServiceName}
 	if payload.CloudAppGUID != "" {
