@@ -5,8 +5,8 @@ NAME := negotiator
 # To build for a os you are not on, use:
 # make build GOOS=linux
 
-# To compile for linux, create the docker image 
-# and push it to docker.io/feedhenry/negotiator with the version specified above, use: 
+# To compile for linux, create the docker image
+# and push it to docker.io/feedhenry/negotiator with the version specified above, use:
 # make docker_build_push GOOS=linux
 
 # This is the first target, so it is the default, i.e.
@@ -27,7 +27,7 @@ build_services:
 	cd cmd/services && go build -ldflags "-X main.Version=v$(VERSION)"
 
 .PHONY: docker_build
-docker_build:
+docker_build: build
 	docker build -t feedhenry/negotiator:${VERSION} .
 
 .PHONY: docker_push

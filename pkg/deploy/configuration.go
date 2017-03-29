@@ -79,6 +79,12 @@ func (cf *ConfigurationFactory) Factory(service string, config *Configuration, w
 			statusKey:       StatusKey(config.InstanceID, config.Action),
 			wait:            wait,
 		}
+	case templatePushUps:
+		return &PushUpsConfigure{
+			StatusPublisher: cf.StatusPublisher,
+			TemplateLoader:  cf.TemplateLoader,
+			logger:          cf.Logger,
+		}
 	}
 
 	panic("unknown service type cannot configure")
@@ -534,6 +540,14 @@ func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentC
 			Name:  "MYSQL_HOST",
 			Value: dataService[0].GetName(),
 		})
+		deployment.Spec.Template.Spec.Containers[ci].Env = append(deployment.Spec.Template.Spec.Containers[ci].Env, k8api.EnvVar{
+			Name:  "MYSQL_PORT",
+			Value: "3306",
+		})
+		deployment.Spec.Template.Spec.Containers[ci].Env = append(deployment.Spec.Template.Spec.Containers[ci].Env, k8api.EnvVar{
+			Name:  "MYSQL_SERVICE_PORT",
+			Value: "3306",
+		})
 	}
 	tpl, err := d.TemplateLoader.Load(jobName)
 	if err != nil {
@@ -584,6 +598,23 @@ func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentC
 
 		}
 	}()
+
+	return deployment, nil
+}
+
+func (p *PushUpsConfigure) statusUpdate(key, message, status string) {
+	if p.status == nil {
+		p.status = &ConfigurationStatus{Started: time.Now(), Log: []string{}}
+	}
+	p.status.Log = append(p.status.Log, message)
+	p.status.Status = status
+	if err := p.StatusPublisher.Publish(key, *p.status); err != nil {
+		p.logger.Info("failed to publish status", err.Error())
+	}
+}
+
+// Configure the Push vars here
+func (p *PushUpsConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
 
 	return deployment, nil
 }
