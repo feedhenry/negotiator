@@ -11,22 +11,27 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// StatusRetriever defines how deploy status should be retrieved
 type StatusRetriever interface {
 	Get(key string) (*deploy.Status, error)
 }
 
+// LastOperationHandler handles returning the status of the last operation on a service. For example a provision
 type LastOperationHandler struct {
 	statusRetriever StatusRetriever
 	logger          log.Logger
 }
 
+// NewLastOperationHandler return a snew LastOperationHandler
 func NewLastOperationHandler(statusRet StatusRetriever, logger log.Logger) LastOperationHandler {
 	return LastOperationHandler{
 		statusRetriever: statusRet,
 		logger:          logger,
 	}
 }
-func (lah LastOperationHandler) LastAction(rw http.ResponseWriter, req *http.Request) {
+
+// LastOperation handle the LastOperation requests
+func (lah LastOperationHandler) LastOperation(rw http.ResponseWriter, req *http.Request) {
 	params := mux.Vars(req)
 	instance := params["instance_id"]
 	//planID := params["plan_id"]      // not currently used
