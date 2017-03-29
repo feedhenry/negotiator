@@ -1,6 +1,6 @@
 package templates
 
-//CacheTemplate defines the template for deploying a cache environment service to openshift 3
+//CacheRedisTemplate defines the template for deploying a cache environment service to openshift 3
 var CacheRedisTemplate = `
 {{define "cache-redis"}}
 {
