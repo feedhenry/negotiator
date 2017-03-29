@@ -55,6 +55,7 @@ func (rp *RedisRetrieverPublisher) Get(key string) (*deploy.Status, error) {
 	return &ret, nil
 }
 
+// Clear removes the key from redis
 func (rp *RedisRetrieverPublisher) Clear(key string) error {
 	return rp.Client.Del(key).Err()
 }

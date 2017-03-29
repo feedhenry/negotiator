@@ -22,25 +22,29 @@ func TestCacheConfigurationJob(t *testing.T) {
 		Logger:          logger,
 		TemplateLoader:  tl,
 	}
-
 	cacheConfig := factory.Factory("cache-redis", &deploy.Configuration{InstanceID: "test", Action: "provision"}, &sync.WaitGroup{})
-	depConfig := []dcapi.DeploymentConfig{
-		{ObjectMeta: api.ObjectMeta{Name: "test"}, Spec: dcapi.DeploymentConfigSpec{
-			Template: &api.PodTemplateSpec{
-				Spec: api.PodSpec{
-					Containers: []api.Container{{
-						Name: "",
-						Env: []api.EnvVar{{
-							Name:  "test",
-							Value: "test",
-						}, {
-							Name:  "FH_REDIS_HOST",
-							Value: "",
+	serviceDepConfig := []dcapi.DeploymentConfig{
+		{
+			ObjectMeta: api.ObjectMeta{
+				Name: "test",
+			},
+			Spec: dcapi.DeploymentConfigSpec{
+				Template: &api.PodTemplateSpec{
+					Spec: api.PodSpec{
+						Containers: []api.Container{{
+							Name: "",
+							Env: []api.EnvVar{{
+								Name:  "test",
+								Value: "test",
+							}, {
+								Name:  "FH_REDIS_HOST",
+								Value: "",
+							}},
 						}},
-					}},
+					},
 				},
 			},
-		}},
+		},
 	}
 
 	cases := []struct {
@@ -78,7 +82,7 @@ func TestCacheConfigurationJob(t *testing.T) {
 					}
 				}
 				if !varFound {
-					return fmt.Errorf("expected to find FH_REDIS_HOST with value cache")
+					return fmt.Errorf("expected to find FH_REDIS_HOST with value data-cache")
 				}
 				return nil
 			},
@@ -111,19 +115,19 @@ func TestCacheConfigurationJob(t *testing.T) {
 					}
 				}
 				if !varFound {
-					return fmt.Errorf("expected to find FH_REDIS_HOST with value cache")
+					return fmt.Errorf("expected to find FH_REDIS_HOST with value data-cache")
 				}
 				return nil
 			},
 			Calls: map[string]int{},
 		},
 	}
-
+	//run our test cases
 	for _, tc := range cases {
 		t.Run(tc.TestName, func(t *testing.T) {
 			client := mock.NewPassClient()
-			client.Returns["FindDeploymentConfigsByLabel"] = depConfig
-			deployment, err := cacheConfig.Configure(client, &depConfig[0], "test")
+			client.Returns["FindDeploymentConfigsByLabel"] = serviceDepConfig
+			deployment, err := cacheConfig.Configure(client, &serviceDepConfig[0], "test")
 			if tc.ExpectError && err == nil {
 				t.Fatalf(" expected an error but got none")
 			}

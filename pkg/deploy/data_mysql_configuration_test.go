@@ -1,11 +1,8 @@
 package deploy_test
 
 import (
-	"testing"
-
 	"sync"
-
-	"regexp"
+	"testing"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/feedhenry/negotiator/pkg/deploy"
@@ -16,7 +13,7 @@ import (
 	"k8s.io/kubernetes/pkg/apis/batch"
 )
 
-func TestMongoConfiguration(t *testing.T) {
+func TestMysqlConfiguration(t *testing.T) {
 	tl := openshift.NewTemplateLoaderDecoder("../openshift/templates/")
 	msp := &mockStatusPublisher{}
 	logger := logrus.StandardLogger()
@@ -25,36 +22,13 @@ func TestMongoConfiguration(t *testing.T) {
 		Logger:          logger,
 		TemplateLoader:  tl,
 	}
-	mongodc := []dcapi.DeploymentConfig{
-		{ObjectMeta: api.ObjectMeta{Name: "data-mongo"}, Spec: dcapi.DeploymentConfigSpec{
-			Template: &api.PodTemplateSpec{
-				Spec: api.PodSpec{
-					Containers: []api.Container{{
-						Name: "",
-						Env: []api.EnvVar{{
-							Name:  "MONGODB_REPLICA_NAME",
-							Value: "",
-						}, {
-							Name:  "MONGODB_ADMIN_PASSWORD",
-							Value: "password",
-						}},
-					}},
-				},
-			},
-		}},
-	}
-	mongosc := []api.Service{{
-		ObjectMeta: api.ObjectMeta{
-			Name: "data-mongo",
-			Labels: map[string]string{
-				"rhmap/name": "data-mongo",
-			},
-		}},
-	}
 	deployingConfig := func() dcapi.DeploymentConfig {
 		return dcapi.DeploymentConfig{
 			ObjectMeta: api.ObjectMeta{
 				Name: "test",
+				Labels: map[string]string{
+					"rhmap/guid": "",
+				},
 			},
 			Spec: dcapi.DeploymentConfigSpec{
 				Template: &api.PodTemplateSpec{
@@ -71,15 +45,55 @@ func TestMongoConfiguration(t *testing.T) {
 			},
 		}
 	}
+	//setup the MySQL DeploymentConfig fresh for each test
+	getMysqldc := func() []dcapi.DeploymentConfig {
+		return []dcapi.DeploymentConfig{
+			{
+				ObjectMeta: api.ObjectMeta{
+					Name: "data-mysql",
+					Labels: map[string]string{
+						"rhmap/guid": "asdasdasdassdasdasdsadasdadasdasdasdasdsda",
+					},
+				},
+				Spec: dcapi.DeploymentConfigSpec{
+					Template: &api.PodTemplateSpec{
+						Spec: api.PodSpec{
+							Containers: []api.Container{{
+								Name: "",
+								Env: []api.EnvVar{
+									{
+										Name:  "MYSQL_ROOT_PASSWORD",
+										Value: "dfgdfgdf",
+									},
+								},
+							}},
+						},
+					},
+				}},
+		}
+	}
+	getMysqlsc := func() []api.Service {
 
-	mongojob := batch.Job{}
+		return []api.Service{
+			{
+				ObjectMeta: api.ObjectMeta{
+					Labels: map[string]string{
+						"rhmap/name": "data-mysql",
+						"rhmap/guid": "asdasdasdassdasdasdsadasdadasdasdasdasdsda",
+					},
+				},
+			},
+		}
+	}
+
+	mysqlJob := batch.Job{}
 
 	cases := []struct {
 		Name          string
 		ExpectError   bool
-		MongoDC       func() []dcapi.DeploymentConfig
-		MongoSvc      func() []api.Service
-		MongoJob      func() *batch.Job
+		MysqlDC       func() []dcapi.DeploymentConfig
+		MysqlSvc      func() []api.Service
+		MysqlJob      func() *batch.Job
 		DcToConfigure func() *dcapi.DeploymentConfig
 		Namespace     string
 		AssertDC      func(t *testing.T, dc *dcapi.DeploymentConfig)
@@ -95,14 +109,14 @@ func TestMongoConfiguration(t *testing.T) {
 				"FindServiceByLabel":           1,
 				"CreateJobToWatch":             1,
 			},
-			MongoDC: func() []dcapi.DeploymentConfig {
-				return mongodc
+			MysqlDC: func() []dcapi.DeploymentConfig {
+				return getMysqldc()
 			},
-			MongoJob: func() *batch.Job {
+			MysqlJob: func() *batch.Job {
 				return nil
 			},
-			MongoSvc: func() []api.Service {
-				return mongosc
+			MysqlSvc: func() []api.Service {
+				return getMysqlsc()
 			},
 			DcToConfigure: func() *dcapi.DeploymentConfig {
 				dc := deployingConfig()
@@ -113,18 +127,34 @@ func TestMongoConfiguration(t *testing.T) {
 					t.Fatalf("did not expect the DeploymentConfig to be nil")
 				}
 				env := dc.Spec.Template.Spec.Containers[0].Env
-				foundMongoEnv := false
+				foundMYSQL_HOST := false
+				foundMYSQL_PORT := false
+				foundMYSQL_SERVICE_PORT := false
+				foundMYSQLUSER := false
+				foundMYSQLPASSWORD := false
+				foundMYSQLDATABASE := false
 				for _, e := range env {
-					if e.Name == "FH_MONGODB_CONN_URL" {
-						foundMongoEnv = true
-						mongoReg := regexp.MustCompile("mongodb:\\/\\/[\\w]+:[\\w]+@[\\w-]+:27017\\/[\\w]+")
-						if !mongoReg.Match([]byte(e.Value)) {
-							t.Fatalf("mongo url was not correct %s", e.Value)
-						}
+					if e.Name == "MYSQL_SERVICE_PORT" {
+						foundMYSQL_SERVICE_PORT = true
+					}
+					if e.Name == "MYSQL_HOST" {
+						foundMYSQL_HOST = true
+					}
+					if e.Name == "MYSQL_PORT" {
+						foundMYSQL_PORT = true
+					}
+					if e.Name == "MYSQL_PASSWORD" {
+						foundMYSQLPASSWORD = true
+					}
+					if e.Name == "MYSQL_DATABASE" {
+						foundMYSQLDATABASE = true
+					}
+					if e.Name == "MYSQL_USER" {
+						foundMYSQLUSER = true
 					}
 				}
-				if !foundMongoEnv {
-					t.Fatalf("did not find FH_MONGODB_CONN_URL but expected to")
+				if !foundMYSQL_HOST && foundMYSQL_PORT && foundMYSQL_SERVICE_PORT && foundMYSQLDATABASE && foundMYSQLPASSWORD && foundMYSQLUSER {
+					t.Fatalf("did not find MYSQL ENV VARS  but expected to")
 				}
 			},
 		},
@@ -137,20 +167,24 @@ func TestMongoConfiguration(t *testing.T) {
 				"FindDeploymentConfigsByLabel": 0,
 				"CreateJobToWatch":             0,
 			},
-			MongoDC: func() []dcapi.DeploymentConfig {
-				return mongodc
+			MysqlDC: func() []dcapi.DeploymentConfig {
+				return getMysqldc()
 			},
-			MongoJob: func() *batch.Job {
-				return &mongojob
+			MysqlJob: func() *batch.Job {
+				return &mysqlJob
 			},
-			MongoSvc: func() []api.Service {
-				return mongosc
+			MysqlSvc: func() []api.Service {
+				return getMysqlsc()
 			},
 			DcToConfigure: func() *dcapi.DeploymentConfig {
 				dc := deployingConfig()
 				dc.Spec.Template.Spec.Containers[0].Env = append(dc.Spec.Template.Spec.Containers[0].Env, api.EnvVar{
-					Name:  "FH_MONGODB_CONN_URL",
-					Value: "mongodb://thisisatest",
+					Name:  "MYSQL_HOST",
+					Value: "mysql",
+				})
+				dc.Spec.Template.Spec.Containers[0].Env = append(dc.Spec.Template.Spec.Containers[0].Env, api.EnvVar{
+					Name:  "MYSQL_USER",
+					Value: "test",
 				})
 				return &dc
 
@@ -160,17 +194,17 @@ func TestMongoConfiguration(t *testing.T) {
 					t.Fatalf("did not expect the DeploymentConfig to be nil")
 				}
 				env := dc.Spec.Template.Spec.Containers[0].Env
-				foundMongoEnv := false
+				foundMYSQLUSER := false
 				for _, e := range env {
-					if e.Name == "FH_MONGODB_CONN_URL" {
-						foundMongoEnv = true
-						if e.Value != "mongodb://thisisatest" {
-							t.Fatalf("expected the mongo FH_MONGODB_CONN_URL not to have changed but it did %s", e.Value)
+					if e.Name == "MYSQL_USER" {
+						foundMYSQLUSER = true
+						if e.Value != "test" {
+							t.Fatalf("expected the MYSQL_USER not to have changed but it did %s", e.Value)
 						}
 					}
 				}
-				if !foundMongoEnv {
-					t.Fatalf("did not find FH_MONGODB_CONN_URL but expected to")
+				if !foundMYSQLUSER {
+					t.Fatalf("did not find MYSQL_USER but expected to")
 				}
 			},
 		},
@@ -184,13 +218,13 @@ func TestMongoConfiguration(t *testing.T) {
 				"FindServiceByLabel":           1,
 				"CreateJobToWatch":             0,
 			},
-			MongoDC: func() []dcapi.DeploymentConfig {
-				return mongodc
+			MysqlDC: func() []dcapi.DeploymentConfig {
+				return getMysqldc()
 			},
-			MongoJob: func() *batch.Job {
+			MysqlJob: func() *batch.Job {
 				return nil
 			},
-			MongoSvc: func() []api.Service {
+			MysqlSvc: func() []api.Service {
 				return []api.Service{}
 			},
 			DcToConfigure: func() *dcapi.DeploymentConfig {
@@ -213,14 +247,14 @@ func TestMongoConfiguration(t *testing.T) {
 				"FindServiceByLabel":           0,
 				"CreateJobToWatch":             0,
 			},
-			MongoDC: func() []dcapi.DeploymentConfig {
+			MysqlDC: func() []dcapi.DeploymentConfig {
 				return []dcapi.DeploymentConfig{}
 			},
-			MongoJob: func() *batch.Job {
+			MysqlJob: func() *batch.Job {
 				return nil
 			},
-			MongoSvc: func() []api.Service {
-				return mongosc
+			MysqlSvc: func() []api.Service {
+				return getMysqlsc()
 			},
 			DcToConfigure: func() *dcapi.DeploymentConfig {
 				dc := deployingConfig()
@@ -233,13 +267,14 @@ func TestMongoConfiguration(t *testing.T) {
 			},
 		},
 	}
+
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			client := mock.NewPassClient()
-			client.Returns["FindDeploymentConfigsByLabel"] = tc.MongoDC()
-			client.Returns["FindServiceByLabel"] = tc.MongoSvc()
-			client.Returns["FindJobByName"] = tc.MongoJob()
-			configure := factory.Factory("data-mongo", &deploy.Configuration{InstanceID: "instance", Action: "provision"}, &sync.WaitGroup{})
+			client.Returns["FindDeploymentConfigsByLabel"] = tc.MysqlDC()
+			client.Returns["FindServiceByLabel"] = tc.MysqlSvc()
+			client.Returns["FindJobByName"] = tc.MysqlJob()
+			configure := factory.Factory("data-mysql", &deploy.Configuration{InstanceID: "instance", Action: "provision"}, &sync.WaitGroup{})
 			dc, err := configure.Configure(client, tc.DcToConfigure(), tc.Namespace)
 			if tc.ExpectError && err == nil {
 				t.Fatalf("expected an error but got none")
@@ -256,4 +291,5 @@ func TestMongoConfiguration(t *testing.T) {
 
 		})
 	}
+
 }

@@ -57,7 +57,7 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 		return deployment, nil
 	}
 	if existingJob != nil {
-		d.statusUpdate("configuration job "+deployment.Name+"-dataconfig-job has already executed. No need to run again ", "complete")
+		d.statusUpdate("configuration job "+deployment.Name+"-dataconfig-job has already executed. No need to run again ", configInProgress)
 		return deployment, nil
 	}
 	dataDc, err := client.FindDeploymentConfigsByLabel(namespace, map[string]string{"rhmap/name": esName})
