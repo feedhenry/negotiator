@@ -5,14 +5,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"github.com/fheng/core/pkg/cmd/mapper_service/Godeps/_workspace/src/github.com/Sirupsen/logrus"
 )
 
-//Deployer interface for the Deploy Controller
-type Deployer interface {
-	Template(Client, string, string, *Payload) (*Dispatched, error)
-}
-
-func deployDependencyServices(c Deployer, client Client, template *Template, nameSpace string, payload *Payload) ([]*Dispatched, error) {
+//noinspection GoVarDeclaration
+func deployDependencyServices(c Controller, client Client, template *Template, nameSpace string, payload *Payload) ([]*Dispatched, error) {
 	if _, ok := template.Annotations["dependencies"]; !ok {
 		// no dependencies to process
 		return nil, nil
@@ -25,6 +22,21 @@ func deployDependencyServices(c Deployer, client Client, template *Template, nam
 	dependencies := []*Dispatched{}
 
 	for _, dep := range strings.Split(template.Annotations["dependencies"], " ") {
+
+		dep = strings.ToLower(strings.TrimSpace(dep))
+		// Trim out common bad data
+		if dep == "" || dep == "," {
+			continue
+		}
+
+		// check if dependency is already deployed
+		logrus.Info("Checking for service: rhmap/name: " + dep + " in namespace: " + nameSpace)
+		dcs, err := client.FindDeploymentConfigsByLabel(nameSpace, map[string]string{"rhmap/name": dep})
+		if len(dcs) > 0 {
+			logrus.Info("service found, skipping this dependency")
+			continue
+		}
+		logrus.Info("Service not found, deploying this dependency")
 		dispatched, err := c.Template(client, dep, nameSpace, payload)
 		if err != nil {
 			return dependencies, err
@@ -46,7 +58,6 @@ func waitForDependencies(client Client, namespace string, dependencies []*Dispat
 			timeout := 300
 			start := time.Now().UTC().Second()
 			for {
-
 				body, err := client.GetDeployLogs(namespace, dependency.DeploymentName)
 				if err != nil {
 					continue
@@ -66,7 +77,7 @@ func waitForDependencies(client Client, namespace string, dependencies []*Dispat
 
 	dependencyGroup.Wait()
 
-	// dependencies were not succesful, return an error
+	// dependencies were not successful, return an error
 	if len(depErrors) > 0 {
 		return errors.New(strings.Join(depErrors, "\n"))
 	}
