@@ -301,3 +301,12 @@ func (pc PassClient) BuildURL(ns, bc, id string) string {
 func (pc PassClient) CalledTimes(f string) int {
 	return pc.Called[f]
 }
+
+func (pc PassClient) GetDeployLogs(ns, deploy string) (string, error) {
+	pc.Called["GetDeployLogs"]++
+	var ret string
+	if pc.Returns["GetDeployLogs"] != nil {
+		ret = pc.Returns["GetDeployLogs"].(string)
+	}
+	return ret, nil
+}

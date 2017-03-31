@@ -1,10 +1,7 @@
 package deploy
 
 import (
-	"crypto/tls"
 	"errors"
-	"io/ioutil"
-	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +15,10 @@ type Deployer interface {
 func deployDependencyServices(c Deployer, client Client, template *Template, nameSpace string, payload *Payload) ([]*Dispatched, error) {
 	if _, ok := template.Annotations["dependencies"]; !ok {
 		// no dependencies to process
+		return nil, nil
+	}
+
+	if strings.TrimSpace(template.Annotations["dependencies"]) == "" {
 		return nil, nil
 	}
 
@@ -45,29 +46,11 @@ func waitForDependencies(client Client, namespace string, dependencies []*Dispat
 			timeout := 300
 			start := time.Now().UTC().Second()
 			for {
-				//accept self-signed certs
-				tr := &http.Transport{
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-				}
-				client := &http.Client{Transport: tr}
 
-				//set up authorization
-				var bearer = "Bearer " + payload.Target.Token
-				req, err := http.NewRequest("GET", dependency.WatchURL, nil)
+				body, err := client.GetDeployLogs(namespace, dependency.DeploymentName)
 				if err != nil {
-					panic(err)
+					continue
 				}
-				req.Header.Add("authorization", bearer)
-
-				//perform GET request
-				resp, err := client.Do(req)
-				if err != nil {
-					panic(err)
-				}
-
-				bodyBytes, _ := ioutil.ReadAll(resp.Body)
-				body := string(bodyBytes)
-
 				// if success exit
 				if strings.Contains(strings.ToLower(body), "success") {
 					return

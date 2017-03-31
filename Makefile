@@ -1,6 +1,8 @@
-SHELL := /bin/bash
-VERSION := 0.0.11
-NAME := negotiator
+SHELL = /bin/bash
+VERSION = 0.0.11
+NAME = negotiator
+# default package to test
+PKG = pkg/deploy
 
 # To build for a os you are not on, use:
 # make build GOOS=linux
@@ -62,13 +64,18 @@ check-golint:
 vet:
 	go vet ./...
 
-.PHONY: test
+.PHONY: test-unit
 test-unit:
 	go test -short -v --cover -cpu=2 `go list ./... | grep -v /vendor/ | grep -v /design`
 
 .PHONY: test-race
 test-race:
 	go test -v -cpu=1,2,4 -short -race `go list ./... | grep -v /vendor/`
+
+.PHONY: test-coverage
+test-coverage:
+	go test -coverprofile cover.out github.com/feedhenry/negotiator/$(PKG)
+	go tool cover -html=cover.out -o cover.html 
 
 .PHONY: deps
 deps:

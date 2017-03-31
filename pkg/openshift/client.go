@@ -344,6 +344,16 @@ func (c Client) DeployLogURL(ns, dc string) string {
 	return fmt.Sprintf("%s/oapi/v1/namespaces/%s/deploymentconfigs/%s/log?follow=true", c.host, ns, dc)
 }
 
+// GetDeployLogs returns the logs for the supplied deployName in the supplied namespace
+func (c Client) GetDeployLogs(ns, deployName string) (string, error) {
+	raw, err := c.oc.DeploymentLogs(ns).Get(deployName, dc.DeploymentLogOptions{Follow: true}).Do().Raw()
+	if err != nil {
+		return "", err
+	}
+
+	return string(raw), nil
+}
+
 // BuildConfigLogURL returns the URL that can be polled for the build log of the specified dc in the specified namespace
 func (c Client) BuildConfigLogURL(ns, bc string) string {
 	return fmt.Sprintf("%s/oapi/v1/namespaces/%s/builds/%s/log?follow=true", c.host, ns, bc)

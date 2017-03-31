@@ -62,6 +62,7 @@ type Client interface {
 	DeployLogURL(ns, dc string) string
 	BuildConfigLogURL(ns, dc string) string
 	BuildURL(ns, bc, id string) string
+	GetDeployLogs(ns, deployName string) (string, error)
 }
 
 // Controller handle deploy templates to OSCP

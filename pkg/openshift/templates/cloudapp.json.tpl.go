@@ -10,7 +10,7 @@ var CloudAppTemplate = `
     "name": "cloudapp",
     "annotations": {
       "description": "cloudApp",
-      "dependenices": "None",
+      "dependenices": "",
       "tags": "rhmap,cloudApp"
     }
   },
