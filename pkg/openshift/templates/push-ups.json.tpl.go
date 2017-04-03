@@ -15,7 +15,17 @@ var PushUPSTemplate = `
 			"iconClass": "icon-jboss"
     	}
   	},
-  	"objects": [{
+  	"objects": [
+	{
+      "kind": "ConfigMap",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "ups-client-config"
+      },
+      "data": {
+      }
+    },
+	{
         "kind": "Route",
         "apiVersion": "v1",
         "metadata": {
@@ -143,6 +153,14 @@ var PushUPSTemplate = `
 									"failureThreshold": 1
 								},
 								"env": [
+									{
+										"name":"ADMIN_USER",
+										"value":"admin"
+									},
+									{
+										"name":"ADMIN_PASSWORD",
+										"value":"123"
+									},
 									{
 										"name": "KEYCLOAK_BASE_URL",
 										"value": ""

@@ -81,7 +81,7 @@ test-race:
 .PHONY: test-coverage
 test-coverage:
 	go test -coverprofile cover.out github.com/feedhenry/negotiator/$(PKG)
-	go tool cover -html=cover.out -o cover.html 
+	go tool cover -html=cover.out -o cover.html
 
 .PHONY: deps
 deps:
