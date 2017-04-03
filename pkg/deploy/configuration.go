@@ -14,6 +14,7 @@ import (
 
 	"github.com/feedhenry/negotiator/pkg/log"
 	dc "github.com/openshift/origin/pkg/deploy/api"
+	"github.com/feedhenry/negotiator/pkg/config"
 )
 
 // LogStatusPublisher publishes the status to the log
@@ -215,4 +216,26 @@ func (p *PushUpsConfigure) statusUpdate(description, status string) {
 func (p *PushUpsConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
 
 	return deployment, nil
+}
+
+func waitForService(client Client, namespace, serviceName string) error {
+	conf := config.Conf{}
+	// poll deploy, waiting for success
+	timeout := time.After(time.Second * time.Duration(conf.DependencyTimeout()))
+	for {
+		select {
+		case <-timeout:
+		//timed out, exit
+			return errors.New("timed out waiting for dependency: " + serviceName + " to deploy")
+		default:
+			body, err := client.GetDeployLogs(namespace, serviceName)
+			if err != nil {
+				continue
+			}
+		// if success move on to configure job
+			if strings.Contains(strings.ToLower(body), "success") {
+				return nil
+			}
+		}
+	}
 }

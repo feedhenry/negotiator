@@ -352,8 +352,6 @@ func (c Client) GetDeployLogs(ns, deployName string) (string, error) {
 		return "", err
 	}
 
-	logrus.Info(string(raw))
-
 	return string(raw), nil
 }
 

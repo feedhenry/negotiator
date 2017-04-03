@@ -13,9 +13,6 @@ import (
 	"k8s.io/kubernetes/pkg/apis/batch"
 	"k8s.io/kubernetes/pkg/runtime"
 	"k8s.io/kubernetes/pkg/watch"
-	"github.com/feedhenry/negotiator/pkg/config"
-	"time"
-	"strings"
 )
 
 // DataMongoConfigure is a object for configuring mongo connection strings
@@ -84,26 +81,10 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 		return nil, err
 	}
 
-	conf := config.Conf{}
-
-	// poll deploy, waiting for success
-	timeout := time.After(time.Second * time.Duration(conf.DependencyTimeout()))
-	deploymentComplete := false
-	for deploymentComplete == false {
-		select {
-		case <-timeout:
-		//timed out, exit
-			return nil, errors.New("timed out waiting for dependency: " + templateDataMongo + " to deploy")
-		default:
-			body, err := client.GetDeployLogs(namespace, templateDataMongo)
-			if err != nil {
-				continue
-			}
-		// if success move on to configure job
-			if strings.Contains(strings.ToLower(body), "success") {
-				deploymentComplete = true
-			}
-		}
+	//block here until the service is ready to accept a connection from this job
+	err = waitForService(client, namespace, templateDataMongo)
+	if err != nil {
+		return nil, err
 	}
 
 	// if we get this far then the job does not exists so we will run another one which will update the FH_MONGODB_CONN_URL and create or update any database and user password definitions

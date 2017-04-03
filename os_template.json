@@ -15,9 +15,9 @@
         "description": "where the template files are located",
         "required": false
     },{
-        "name": "DEPENDENCIES_TIMEOUT",
+        "name": "DEPENDENCY_TIMEOUT",
         "value": "1800",
-        "description": "where the template files are located",
+        "description": "How long to wait for service dependencies to deploy",
         "required": false
     }],
     "objects": [{
@@ -112,7 +112,12 @@
                     "containers": [{
                         "name": "negotiator",
                         "image": "feedhenry/negotiator:0.0.11",
-                        "env": [],
+                        "env": [{
+                        "name": "DEPENDENCY_TIMEOUT",
+                        "value": "${DEPENDENCY_TIMEOUT}",
+                        "description": "How long to wait for dependency services to start",
+                        "required": false
+                    }],
                         "resources": {},
                         "terminationMessagePath": "/dev/termination-log",
                         "imagePullPolicy": "IfNotPresent"
