@@ -62,6 +62,54 @@ func (pc PassClient) CreateJobToWatch(j *batch.Job, ns string) (watch.Interface,
 	return watch.NewEmptyWatch(), nil
 }
 
+func (pc PassClient) FindRouteByName(ns, name string) (*roapi.Route, error) {
+	pc.Called["FindRouteByName"]++
+	if e, ok := pc.Error["FindRouteByName"]; ok {
+		return nil, e
+	}
+	var ret = &roapi.Route{}
+	if pc.Returns["FindRouteByName"] != nil {
+		ret = pc.Returns["FindRouteByName"].(*roapi.Route)
+	}
+	return ret, nil
+}
+
+func (pc PassClient) FindConfigMapByName(ns, name string) (*api.ConfigMap, error) {
+	pc.Called["FindConfigMapByName"]++
+	if e, ok := pc.Error["FindConfigMapByName"]; ok {
+		return nil, e
+	}
+	var ret = &api.ConfigMap{}
+	if pc.Returns["FindConfigMapByName"] != nil {
+		ret = pc.Returns["FindConfigMapByName"].(*api.ConfigMap)
+	}
+	return ret, nil
+}
+
+func (pc PassClient) CreateConfigMap(ns string, cm *api.ConfigMap) (*api.ConfigMap, error) {
+	pc.Called["CreateConfigMap"]++
+	if e, ok := pc.Error["CreateConfigMap"]; ok {
+		return nil, e
+	}
+	var ret = &api.ConfigMap{}
+	if pc.Returns["CreateConfigMap"] != nil {
+		ret = pc.Returns["CreateConfigMap"].(*api.ConfigMap)
+	}
+	return ret, nil
+}
+
+func (pc PassClient) UpdateConfigMap(ns string, cm *api.ConfigMap) (*api.ConfigMap, error) {
+	pc.Called["UpdateConfigMap"]++
+	if e, ok := pc.Error["UpdateConfigMap"]; ok {
+		return nil, e
+	}
+	var ret = &api.ConfigMap{}
+	if pc.Returns["UpdateConfigMap"] != nil {
+		ret = pc.Returns["UpdateConfigMap"].(*api.ConfigMap)
+	}
+	return ret, nil
+}
+
 func (pc PassClient) FindServiceByLabel(ns string, searchLabels map[string]string) ([]api.Service, error) {
 	pc.Called["FindServiceByLabel"]++
 	if e, ok := pc.Error["FindServiceByLabel"]; ok {

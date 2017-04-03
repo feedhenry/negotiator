@@ -78,6 +78,7 @@ func (cf *ConfigurationFactory) Factory(service string, config *Configuration, w
 			StatusPublisher: cf.StatusPublisher,
 			TemplateLoader:  cf.TemplateLoader,
 			logger:          cf.Logger,
+			PushLister:      DefaultPushLister,
 		}
 	}
 
@@ -182,7 +183,7 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, config *
 		cac.StatusPublisher.Publish(statusKey, configInProgress, "configuring "+serviceName)
 		configured[serviceName] = true
 		c := cac.ConfigurationFactory.Factory(serviceName, config, waitGroup)
-		c.Configure(client, deployment, namespace)
+		_, err := c.Configure(client, deployment, namespace)
 		if err != nil {
 			errs = append(errs, err.Error())
 		}
@@ -190,7 +191,7 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, config *
 	go func() {
 		waitGroup.Wait()
 		if _, err := client.UpdateDeployConfigInNamespace(namespace, deployment); err != nil {
-			cac.StatusPublisher.Publish(statusKey, configError, "failed to update DeployConfig after configuring it")
+			cac.StatusPublisher.Publish(statusKey, configError, "failed to update DeployConfig after configuring it "+err.Error())
 		}
 		if len(errs) > 0 {
 			cac.StatusPublisher.Publish(statusKey, configError, fmt.Sprintf(" some configuration jobs failed %v", errs))
@@ -198,24 +199,4 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, config *
 		cac.StatusPublisher.Publish(statusKey, configComplete, "service configuration complete")
 	}()
 	return nil
-}
-
-// PushUpsConfigure is an object for configuring push connection variables
-type PushUpsConfigure struct {
-	StatusPublisher StatusPublisher
-	TemplateLoader  TemplateLoader
-	logger          log.Logger
-	statusKey       string
-}
-
-func (p *PushUpsConfigure) statusUpdate(description, status string) {
-	if err := p.StatusPublisher.Publish(p.statusKey, status, description); err != nil {
-		p.logger.Error("failed to publish status ", err.Error())
-	}
-}
-
-// Configure the Push vars here
-func (p *PushUpsConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
-
-	return deployment, nil
 }

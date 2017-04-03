@@ -131,6 +131,54 @@ func (c Client) FindServiceByLabel(ns string, searchLabels map[string]string) ([
 	return svc.Items, nil
 }
 
+// FindRouteByName returns a route by name from the namespace
+func (c Client) FindRouteByName(ns, name string) (*roapi.Route, error) {
+	r, err := c.oc.Routes(ns).Get(name)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to FindRouteByName")
+	}
+	return r, nil
+}
+
+// FindConfigMapByName returns a config map  for name
+func (c Client) FindConfigMapByName(ns, name string) (*api.ConfigMap, error) {
+	cm, err := c.k8.ConfigMaps(ns).Get(name)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to FindConfigMapByName")
+	}
+	return cm, nil
+}
+
+// CreateConfigMap creates a ConfigMap in the given namespace
+func (c Client) CreateConfigMap(ns string, cm *api.ConfigMap) (*api.ConfigMap, error) {
+	cm, err := c.k8.ConfigMaps(ns).Create(cm)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to CreateConfigMap")
+	}
+	return cm, nil
+}
+
+// UpdateConfigMap updates the ConfigMap in the given namespace
+func (c Client) UpdateConfigMap(ns string, cm *api.ConfigMap) (*api.ConfigMap, error) {
+	var updated *api.ConfigMap
+	err := k8client.RetryOnConflict(k8client.DefaultRetry, func() error {
+		uptodate, err := c.k8.ConfigMaps(ns).Get(cm.Name)
+		if err != nil {
+			return err
+		}
+		cm.SetResourceVersion(uptodate.GetResourceVersion())
+		updated, err = c.k8.ConfigMaps(ns).Update(cm)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to CreateConfigMap")
+	}
+	return updated, nil
+}
+
 // FindJobByName return nil if not found or the Job object
 func (c Client) FindJobByName(ns, name string) (*batch.Job, error) {
 	j, err := c.k8.BatchClient.Jobs(ns).Get(name)
@@ -297,7 +345,6 @@ func (c Client) CreatePersistentVolumeClaim(namespace string, claim *api.Persist
 func (c Client) UpdateDeployConfigInNamespace(ns string, d *dc.DeploymentConfig) (*dc.DeploymentConfig, error) {
 	var deployed *dc.DeploymentConfig
 	err := k8client.RetryOnConflict(k8client.DefaultRetry, func() error {
-		fmt.Println("retrying update")
 		uptodate, err := c.oc.DeploymentConfigs(ns).Get(d.Name)
 		if err != nil {
 			return err

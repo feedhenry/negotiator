@@ -4,6 +4,7 @@ package deploy
 
 import (
 	"bytes"
+	"fmt"
 
 	"text/template"
 
@@ -39,8 +40,10 @@ type TemplateDecoder interface {
 }
 
 // Client is the interface this controller expects for interacting with an openshift paas
-// TODO break this up it is getting too big
+// TODO break this up it is getting too big perhaps into finder, creater updater interfaces
 type Client interface {
+	CreateConfigMap(ns string, cm *k8api.ConfigMap) (*k8api.ConfigMap, error)
+	UpdateConfigMap(ns string, cm *k8api.ConfigMap) (*k8api.ConfigMap, error)
 	CreateServiceInNamespace(ns string, svc *k8api.Service) (*k8api.Service, error)
 	CreateRouteInNamespace(ns string, r *roapi.Route) (*roapi.Route, error)
 	CreateImageStream(ns string, i *image.ImageStream) (*image.ImageStream, error)
@@ -57,6 +60,8 @@ type Client interface {
 	FindDeploymentConfigsByLabel(ns string, searchLabels map[string]string) ([]dc.DeploymentConfig, error)
 	FindServiceByLabel(ns string, searchLabels map[string]string) ([]k8api.Service, error)
 	FindJobByName(ns, name string) (*batch.Job, error)
+	FindRouteByName(ns, name string) (*route.Route, error)
+	FindConfigMapByName(ns, name string) (*k8api.ConfigMap, error)
 	FindBuildConfigByLabel(ns string, searchLabels map[string]string) (*bc.BuildConfig, error)
 	GetDeploymentConfigByName(ns, deploymentName string) (*dc.DeploymentConfig, error)
 	DeployLogURL(ns, dc string) string
@@ -368,6 +373,13 @@ func (c Controller) create(client Client, template *Template, nameSpace, instanc
 				return nil, err
 			}
 			c.statusPublisher.Publish(statusKey, configInProgress, " created Pod definition ")
+		case *k8api.ConfigMap:
+			fmt.Println("creating config map")
+			if _, err := client.CreateConfigMap(nameSpace, ob.(*k8api.ConfigMap)); err != nil {
+				fmt.Println("creating config map", err)
+				return nil, err
+			}
+			c.statusPublisher.Publish(statusKey, configInProgress, " created ConfigMap definition ")
 		}
 	}
 	return dispatched, nil
