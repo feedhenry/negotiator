@@ -104,7 +104,7 @@ func (p *PushUpsConfigure) Configure(client Client, deployment *dc.DeploymentCon
 		return deployment, errors.Wrap(err, "failed to find ups-push DeploymentConfig")
 	}
 	if len(upsDcs) == 0 {
-		return deployment, errors.New("ups-push DeploymentConfig not found")
+		return deployment, errors.New("push-ups DeploymentConfig not found")
 	}
 	upsService, err := client.FindServiceByLabel(namespace, map[string]string{"rhmap/name": "push-ups"})
 	if err != nil || len(upsService) == 0 {
