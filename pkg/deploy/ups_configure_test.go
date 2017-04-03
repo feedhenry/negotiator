@@ -174,6 +174,7 @@ func TestUPSConfigure(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			client := mock.NewPassClient()
 			client.Returns["FindDeploymentConfigsByLabel"] = tc.UPSDC()
+			client.Returns["FindServiceByLabel"] = tc.UPSSvc()
 
 			configure := factory.Factory("push-ups", &deploy.Configuration{InstanceID: "instanceID", Action: "provision"}, &sync.WaitGroup{})
 			pConfigure := configure.(*deploy.PushUpsConfigure)
