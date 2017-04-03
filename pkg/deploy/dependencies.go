@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"github.com/fheng/core/pkg/cmd/mapper_service/Godeps/_workspace/src/github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 )
 
 //noinspection GoVarDeclaration
