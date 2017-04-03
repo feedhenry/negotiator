@@ -14,6 +14,11 @@
         "value": "",
         "description": "where the template files are located",
         "required": false
+    },{
+        "name": "DEPENDENCIES_TIMEOUT",
+        "value": "1800",
+        "description": "where the template files are located",
+        "required": false
     }],
     "objects": [{
         "kind": "Route",

@@ -3,6 +3,8 @@ VERSION = 0.0.11
 NAME = negotiator
 # default package to test
 PKG = pkg/deploy
+BUILDARGS = -ldflags "-X main.Version=v$(VERSION)"
+BUILDENVS =
 
 # To build for a os you are not on, use:
 # make build GOOS=linux
@@ -18,15 +20,15 @@ build: build_negotiator build_jobs build_services
 
 .PHONY: build_negotiator
 build_negotiator:
-	cd cmd/negotiator && go build -ldflags "-X main.Version=v$(VERSION)"
+	cd cmd/negotiator && ${BUILDENVS} go build ${BUILDARGS}
 
 .PHONY: build_jobs
 build_jobs:
-	cd cmd/jobs && go build -ldflags "-X main.Version=v$(VERSION)"
+	cd cmd/jobs && ${BUILDENVS} go build ${BUILDARGS}
 
 .PHONY: build_services
 build_services:
-	cd cmd/services && go build -ldflags "-X main.Version=v$(VERSION)"
+	cd cmd/services && ${BUILDENVS} go build ${BUILDARGS}
 
 .PHONY: docker_build
 docker_build: build
@@ -37,7 +39,11 @@ docker_push:
 	docker push feedhenry/negotiator:${VERSION}
 
 .PHONY: docker_build_push
-docker_build_push: build docker_build docker_push
+docker_build_push: for_linux build docker_build docker_push
+
+.PHONY: for_linux
+for_linux:
+    BUILDENVS += env GOOS=linux
 
 .PHONY: all
 all:
@@ -66,7 +72,7 @@ vet:
 
 .PHONY: test-unit
 test-unit:
-	go test -short -v --cover -cpu=2 `go list ./... | grep -v /vendor/ | grep -v /design`
+	env DEPENDENCY_TIMEOUT=5 go test -short -v --cover -cpu=2 `go list ./... | grep -v /vendor/ | grep -v /design`
 
 .PHONY: test-race
 test-race:

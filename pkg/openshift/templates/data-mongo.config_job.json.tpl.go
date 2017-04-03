@@ -22,7 +22,7 @@ var DataMongoConfigJob = `
           {
             "name": "datamongoconfig",
             "image": "feedhenry/negotiator:0.0.11",
-            "command": ["jobs",	
+            "command": ["jobs",
               "datamongoconfig",
 			  "--admin-user={{if isset . "admin-user"}}{{ index . "admin-user"}}{{end}}",
 			  "--admin-pass={{if isset . "admin-pass"}}{{ index . "admin-pass"}}{{end}}",

@@ -182,10 +182,7 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, config *
 		cac.StatusPublisher.Publish(statusKey, configInProgress, "configuring "+serviceName)
 		configured[serviceName] = true
 		c := cac.ConfigurationFactory.Factory(serviceName, config, waitGroup)
-		c.Configure(client, deployment, namespace)
-		if err != nil {
-			errs = append(errs, err.Error())
-		}
+		go c.Configure(client, deployment, namespace)
 	}
 	go func() {
 		waitGroup.Wait()

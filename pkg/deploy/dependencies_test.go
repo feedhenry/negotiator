@@ -40,7 +40,6 @@ func TestDeployWithDependencies(t *testing.T) {
 			Calls: map[string]int{
 				"CreateDeployConfigInNamespace": 2,
 				"CreateServiceInNamespace":      2,
-				"GetDeployLogs":                 1,
 			},
 			DispactchedAssert: func(d *deploy.Dispatched) error {
 				if d.InstanceID != "test:push-ups" {

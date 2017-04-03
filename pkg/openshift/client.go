@@ -28,6 +28,7 @@ import (
 	kubectlutil "k8s.io/kubernetes/pkg/kubectl/cmd/util"
 	"k8s.io/kubernetes/pkg/labels"
 	"k8s.io/kubernetes/pkg/watch"
+	"github.com/Sirupsen/logrus"
 )
 
 var (
@@ -346,10 +347,12 @@ func (c Client) DeployLogURL(ns, dc string) string {
 
 // GetDeployLogs returns the logs for the supplied deployName in the supplied namespace
 func (c Client) GetDeployLogs(ns, deployName string) (string, error) {
-	raw, err := c.oc.DeploymentLogs(ns).Get(deployName, dc.DeploymentLogOptions{Follow: true}).Do().Raw()
+	raw, err := c.oc.DeploymentLogs(ns).Get(deployName, dc.DeploymentLogOptions{}).Do().Raw()
 	if err != nil {
 		return "", err
 	}
+
+	logrus.Info(string(raw))
 
 	return string(raw), nil
 }

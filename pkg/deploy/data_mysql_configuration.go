@@ -6,13 +6,15 @@ import (
 	"sync"
 
 	"github.com/feedhenry/negotiator/pkg/log"
-
+	"github.com/feedhenry/negotiator/pkg/config"
 	dc "github.com/openshift/origin/pkg/deploy/api"
 	"github.com/pkg/errors"
 	k8api "k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/apis/batch"
 	"k8s.io/kubernetes/pkg/runtime"
 	"k8s.io/kubernetes/pkg/watch"
+	"strings"
+	"time"
 )
 
 // DataMysqlConfigure is a object for configuring mysql connection variables
@@ -61,6 +63,29 @@ func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentC
 		d.statusUpdate(err.Error(), configError)
 		return nil, err
 	}
+
+	conf := config.Conf{}
+
+	// poll deploy, waiting for success
+	timeout := time.After(time.Second * time.Duration(conf.DependencyTimeout()))
+	deploymentComplete := false
+	for deploymentComplete == false {
+		select {
+		case <-timeout:
+			//timed out, exit
+			return nil, errors.New("timed out waiting for dependency: " + templateDataMysql + " to deploy")
+		default:
+			body, err := client.GetDeployLogs(namespace, templateDataMysql)
+			if err != nil {
+				continue
+			}
+			// if success move on to configure job
+			if strings.Contains(strings.ToLower(body), "success") {
+				deploymentComplete = true
+			}
+		}
+	}
+
 	dataService, err := client.FindServiceByLabel(namespace, map[string]string{"rhmap/name": templateDataMysql})
 	if err != nil {
 		d.statusUpdate("failed to find data service cannot continue "+err.Error(), configError)
