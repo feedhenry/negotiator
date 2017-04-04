@@ -80,6 +80,7 @@ func (cf *ConfigurationFactory) Factory(service string, config *Configuration, w
 			TemplateLoader:  cf.TemplateLoader,
 			logger:          cf.Logger,
 			PushLister:      DefaultPushLister,
+			wait:            wait,
 		}
 	}
 
