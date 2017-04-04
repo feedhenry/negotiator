@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/feedhenry/negotiator/pkg/log"
-
 	dc "github.com/openshift/origin/pkg/deploy/api"
 	"github.com/pkg/errors"
 	k8api "k8s.io/kubernetes/pkg/api"
@@ -61,6 +60,13 @@ func (d *DataMysqlConfigure) Configure(client Client, deployment *dc.DeploymentC
 		d.statusUpdate(err.Error(), configError)
 		return nil, err
 	}
+
+	//block here until the service is ready to accept a connection from this job
+	err = waitForService(client, namespace, templateDataMysql)
+	if err != nil {
+		return nil, err
+	}
+
 	dataService, err := client.FindServiceByLabel(namespace, map[string]string{"rhmap/name": templateDataMysql})
 	if err != nil {
 		d.statusUpdate("failed to find data service cannot continue "+err.Error(), configError)

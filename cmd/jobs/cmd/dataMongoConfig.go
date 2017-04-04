@@ -61,6 +61,7 @@ var dataMongoConfigCmd = &cobra.Command{
 		if err != nil {
 			log.Fatalf("failed to get flag --database-pass %s", err.Error())
 		}
+
 		session, err := mgo.Dial(mongoURL)
 		if err != nil {
 			log.Fatalf("failed to connect to mongo %s", err.Error())

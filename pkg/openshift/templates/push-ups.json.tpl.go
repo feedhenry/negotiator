@@ -9,10 +9,10 @@ var PushUPSTemplate = `
   	"metadata": {
     	"name": "RHMAP UPS",
     	"annotations": {
-      		"description": "RHMAP ups",
+			"description": "RHMAP ups",
 			"dependencies": "data-mysql",
-      		"tags": "rhmap,mobile,nodejs",
-      		"iconClass": "icon-jboss"
+			"tags": "rhmap,mobile,nodejs",
+			"iconClass": "icon-jboss"
     	}
   	},
   	"objects": [

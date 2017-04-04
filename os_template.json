@@ -14,6 +14,11 @@
         "value": "",
         "description": "where the template files are located",
         "required": false
+    },{
+        "name": "DEPENDENCY_TIMEOUT",
+        "value": "1800",
+        "description": "How long to wait for service dependencies to deploy",
+        "required": false
     }],
     "objects": [{
         "kind": "Route",
@@ -106,8 +111,13 @@
                 "spec": {
                     "containers": [{
                         "name": "negotiator",
-                        "image": "feedhenry/negotiator:0.0.10",
-                        "env": [],
+                        "image": "feedhenry/negotiator:0.0.12",
+                        "env": [{
+                        "name": "DEPENDENCY_TIMEOUT",
+                        "value": "${DEPENDENCY_TIMEOUT}",
+                        "description": "How long to wait for dependency services to start",
+                        "required": false
+                    }],
                         "resources": {},
                         "terminationMessagePath": "/dev/termination-log",
                         "imagePullPolicy": "IfNotPresent"

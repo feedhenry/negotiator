@@ -80,6 +80,13 @@ func (d *DataMongoConfigure) Configure(client Client, deployment *dc.DeploymentC
 		d.statusUpdate(err.Error(), configError)
 		return nil, err
 	}
+
+	//block here until the service is ready to accept a connection from this job
+	err = waitForService(client, namespace, templateDataMongo)
+	if err != nil {
+		return nil, err
+	}
+
 	// if we get this far then the job does not exists so we will run another one which will update the FH_MONGODB_CONN_URL and create or update any database and user password definitions
 	jobOpts := map[string]interface{}{}
 	//we know we have a data deployment config and it will have 1 container

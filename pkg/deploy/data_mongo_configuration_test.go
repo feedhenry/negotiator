@@ -80,6 +80,7 @@ func TestMongoConfiguration(t *testing.T) {
 		MongoDC       func() []dcapi.DeploymentConfig
 		MongoSvc      func() []api.Service
 		MongoJob      func() *batch.Job
+		GetDeployLogs func() string
 		DcToConfigure func() *dcapi.DeploymentConfig
 		Namespace     string
 		AssertDC      func(t *testing.T, dc *dcapi.DeploymentConfig)
@@ -100,6 +101,9 @@ func TestMongoConfiguration(t *testing.T) {
 			},
 			MongoJob: func() *batch.Job {
 				return nil
+			},
+			GetDeployLogs: func() string {
+				return "Success"
 			},
 			MongoSvc: func() []api.Service {
 				return mongosc
@@ -142,6 +146,9 @@ func TestMongoConfiguration(t *testing.T) {
 			},
 			MongoJob: func() *batch.Job {
 				return &mongojob
+			},
+			GetDeployLogs: func() string {
+				return "Success"
 			},
 			MongoSvc: func() []api.Service {
 				return mongosc
@@ -190,6 +197,9 @@ func TestMongoConfiguration(t *testing.T) {
 			MongoJob: func() *batch.Job {
 				return nil
 			},
+			GetDeployLogs: func() string {
+				return "Success"
+			},
 			MongoSvc: func() []api.Service {
 				return []api.Service{}
 			},
@@ -219,6 +229,9 @@ func TestMongoConfiguration(t *testing.T) {
 			MongoJob: func() *batch.Job {
 				return nil
 			},
+			GetDeployLogs: func() string {
+				return "Success"
+			},
 			MongoSvc: func() []api.Service {
 				return mongosc
 			},
@@ -239,6 +252,7 @@ func TestMongoConfiguration(t *testing.T) {
 			client.Returns["FindDeploymentConfigsByLabel"] = tc.MongoDC()
 			client.Returns["FindServiceByLabel"] = tc.MongoSvc()
 			client.Returns["FindJobByName"] = tc.MongoJob()
+			client.Returns["GetDeployLogs"] = tc.GetDeployLogs()
 			configure := factory.Factory("data-mongo", &deploy.Configuration{InstanceID: "instance", Action: "provision"}, &sync.WaitGroup{})
 			dc, err := configure.Configure(client, tc.DcToConfigure(), tc.Namespace)
 			if tc.ExpectError && err == nil {
