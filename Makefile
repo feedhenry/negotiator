@@ -1,5 +1,5 @@
 SHELL = /bin/bash
-VERSION = 0.0.13
+VERSION = 0.0.14
 NAME = negotiator
 # default package to test
 PKG = pkg/deploy

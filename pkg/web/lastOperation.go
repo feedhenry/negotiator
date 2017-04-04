@@ -9,6 +9,7 @@ import (
 	"github.com/feedhenry/negotiator/pkg/log"
 	"github.com/feedhenry/negotiator/pkg/status"
 	"github.com/gorilla/mux"
+	"strings"
 )
 
 // StatusRetriever defines how deploy status should be retrieved
@@ -37,6 +38,10 @@ func (lah LastOperationHandler) LastOperation(rw http.ResponseWriter, req *http.
 	instance := params["instance_id"]
 	//planID := params["plan_id"]      // not currently used
 	operation := req.URL.Query().Get("operation")
+	if strings.TrimSpace(operation) == "" {
+		http.Error(rw, "operation GET parameter must be set", 400)
+		return
+	}
 	statusKey := deploy.StatusKey(instance, operation)
 	status, err := lah.statusRetriever.Get(statusKey)
 	if err != nil {
