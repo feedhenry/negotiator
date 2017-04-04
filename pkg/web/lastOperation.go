@@ -32,6 +32,7 @@ func NewLastOperationHandler(statusRet StatusRetriever, logger log.Logger) LastO
 
 // LastOperation handle the LastOperation requests
 func (lah LastOperationHandler) LastOperation(rw http.ResponseWriter, req *http.Request) {
+	rw.Header().Add("Content-Type", "Application/JSON")
 	params := mux.Vars(req)
 	instance := params["instance_id"]
 	//planID := params["plan_id"]      // not currently used
