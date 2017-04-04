@@ -111,7 +111,7 @@
                 "spec": {
                     "containers": [{
                         "name": "negotiator",
-                        "image": "feedhenry/negotiator:0.0.13",
+                        "image": "feedhenry/negotiator:0.0.14",
                         "env": [{
                         "name": "DEPENDENCY_TIMEOUT",
                         "value": "${DEPENDENCY_TIMEOUT}",
