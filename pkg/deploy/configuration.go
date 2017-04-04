@@ -185,10 +185,6 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, config *
 		configured[serviceName] = true
 		c := cac.ConfigurationFactory.Factory(serviceName, config, waitGroup)
 		go c.Configure(client, deployment, namespace)
-		_, err := c.Configure(client, deployment, namespace)
-		if err != nil {
-			errs = append(errs, err.Error())
-		}
 	}
 	go func() {
 		waitGroup.Wait()

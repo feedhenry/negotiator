@@ -308,8 +308,12 @@ func (c Controller) Template(client Client, template, nameSpace string, payload 
 	if err := c.statusPublisher.Publish(statusKey, configInProgress, "service does not exist creating"); err != nil {
 		c.Logger.Error("failed to publish status key " + statusKey + " continuing " + err.Error())
 	}
-	go deployDependencyServices(c, client, osTemplate, nameSpace, payload)
-	
+	_, err = deployDependencyServices(c, client, osTemplate, nameSpace, payload)
+	if err != nil {
+		c.statusPublisher.Publish(statusKey, configError, err.Error())
+		return nil, err
+	}
+
 	dispatched, err = c.create(client, osTemplate, nameSpace, instanceID, payload)
 	if err != nil {
 		c.statusPublisher.Publish(statusKey, configError, err.Error())
