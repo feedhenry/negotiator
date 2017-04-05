@@ -14,6 +14,7 @@ import (
 	"github.com/feedhenry/negotiator/pkg/log"
 	"github.com/feedhenry/negotiator/pkg/status"
 	dc "github.com/openshift/origin/pkg/deploy/api"
+	"github.com/feedhenry/negotiator/pkg/config"
 )
 
 // StatusKey returns a key for logging information against
@@ -64,6 +65,7 @@ func (cf *ConfigurationFactory) Factory(service string, config *Configuration, w
 			TemplateLoader:  cf.TemplateLoader,
 			logger:          cf.Logger,
 			PushLister:      DefaultPushLister,
+			wait:            wait,
 		}
 	}
 
@@ -160,10 +162,7 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, config *
 		cac.StatusPublisher.Publish(statusKey, configInProgress, "configuring "+serviceName)
 		configured[serviceName] = true
 		c := cac.ConfigurationFactory.Factory(serviceName, config, waitGroup)
-		_, err := c.Configure(client, deployment, namespace)
-		if err != nil {
-			errs = append(errs, err.Error())
-		}
+		go c.Configure(client, deployment, namespace)
 	}
 	go func() {
 		waitGroup.Wait()
@@ -176,4 +175,26 @@ func (cac *EnvironmentServiceConfigController) Configure(client Client, config *
 		cac.StatusPublisher.Publish(statusKey, configComplete, "service configuration complete")
 	}()
 	return nil
+}
+
+func waitForService(client Client, namespace, serviceName string) error {
+	conf := config.Conf{}
+	// poll deploy, waiting for success
+	timeout := time.After(time.Second * time.Duration(conf.DependencyTimeout()))
+	for {
+		select {
+		case <-timeout:
+		//timed out, exit
+			return errors.New("timed out waiting for dependency: " + serviceName + " to deploy")
+		default:
+			body, err := client.GetDeployLogs(namespace, serviceName)
+			if err != nil {
+				continue
+			}
+		// if success move on to configure job
+			if strings.Contains(strings.ToLower(body), "success") {
+				return nil
+			}
+		}
+	}
 }

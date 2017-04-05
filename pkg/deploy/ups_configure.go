@@ -10,6 +10,8 @@ import (
 
 	"time"
 
+	"sync"
+
 	"github.com/feedhenry/negotiator/pkg/log"
 	dc "github.com/openshift/origin/pkg/deploy/api"
 	"github.com/pkg/errors"
@@ -23,6 +25,7 @@ type PushUpsConfigure struct {
 	logger          log.Logger
 	statusKey       string
 	PushLister      func(host, user, password string) ([]*PushApplication, error)
+	wait            *sync.WaitGroup
 }
 
 func (p *PushUpsConfigure) statusUpdate(description, status string) {
@@ -92,7 +95,8 @@ type PushApplication struct {
 
 // Configure the Push vars here
 func (p *PushUpsConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
-
+	p.wait.Add(1)
+	defer p.wait.Done()
 	pushConfigPath := "/opt/rh/push-config"
 	// find the push route
 	route, err := client.FindRouteByName(namespace, "push-ups")

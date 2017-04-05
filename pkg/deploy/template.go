@@ -67,6 +67,7 @@ type Client interface {
 	DeployLogURL(ns, dc string) string
 	BuildConfigLogURL(ns, dc string) string
 	BuildURL(ns, bc, id string) string
+	GetDeployLogs(ns, deployName string) (string, error)
 }
 
 // Controller handle deploy templates to OSCP
@@ -101,7 +102,8 @@ type Dispatched struct {
 	// BuildURL is the url used to get the status of a build
 	BuildURL string `json:"buildURL"`
 
-	DeploymentName string `json:"deploymentName"`
+	DeploymentName   string            `json:"deploymentName"`
+	DeploymentLabels map[string]string `json:"deploymentLabels"`
 	//instanceID is used to identify a particular service instance. It is set as the namespace + deploymentName for the service
 	InstanceID string `json:"instanceID"`
 	//Operation can be provision/deprovision/update/
@@ -232,14 +234,14 @@ func (c Controller) Template(client Client, template, nameSpace string, payload 
 	)
 
 	// wrap up the logic for instansiating a build or not
-	instansiateBuild := func() (*Dispatched, error) {
+	instansiateBuild := func(service *Dispatched) (*Dispatched, error) {
 
 		if template != templateCloudApp {
-			dispatched.WatchURL = client.DeployLogURL(nameSpace, payload.ServiceName)
+			dispatched.WatchURL = client.DeployLogURL(nameSpace, service.DeploymentName)
 			return dispatched, nil
 		}
 
-		build, err := client.InstantiateBuild(nameSpace, payload.ServiceName)
+		build, err := client.InstantiateBuild(nameSpace, service.DeploymentName)
 		if err != nil {
 			return nil, err
 		}
@@ -301,11 +303,17 @@ func (c Controller) Template(client Client, template, nameSpace string, payload 
 		dispatched.Operation = operation
 		configurationDetails := &Configuration{Action: operation, DeploymentName: dispatched.DeploymentName, InstanceID: dispatched.InstanceID, NameSpace: nameSpace}
 		c.ConfigurationController.Configure(client, configurationDetails)
-		return instansiateBuild()
+		return instansiateBuild(dispatched)
 	}
 	if err := c.statusPublisher.Publish(statusKey, configInProgress, "service does not exist creating"); err != nil {
 		c.Logger.Error("failed to publish status key " + statusKey + " continuing " + err.Error())
 	}
+	_, err = deployDependencyServices(c, client, osTemplate, nameSpace, payload)
+	if err != nil {
+		c.statusPublisher.Publish(statusKey, configError, err.Error())
+		return nil, err
+	}
+
 	dispatched, err = c.create(client, osTemplate, nameSpace, instanceID, payload)
 	if err != nil {
 		c.statusPublisher.Publish(statusKey, configError, err.Error())
@@ -315,7 +323,7 @@ func (c Controller) Template(client Client, template, nameSpace string, payload 
 	dispatched.Operation = operation
 	configurationDetails := &Configuration{Action: operation, DeploymentName: dispatched.DeploymentName, InstanceID: dispatched.InstanceID, NameSpace: nameSpace}
 	c.ConfigurationController.Configure(client, configurationDetails)
-	return instansiateBuild()
+	return instansiateBuild(dispatched)
 
 }
 
@@ -334,6 +342,7 @@ func (c Controller) create(client Client, template *Template, nameSpace, instanc
 				return nil, err
 			}
 			dispatched.DeploymentName = deployed.Name
+			dispatched.DeploymentLabels = deployed.Labels
 			c.statusPublisher.Publish(statusKey, configInProgress, "deployment created "+deployed.Name)
 		case *k8api.Service:
 			if _, err := client.CreateServiceInNamespace(nameSpace, ob.(*k8api.Service)); err != nil {

@@ -95,6 +95,7 @@ func TestMysqlConfiguration(t *testing.T) {
 		MysqlSvc      func() []api.Service
 		MysqlJob      func() *batch.Job
 		DcToConfigure func() *dcapi.DeploymentConfig
+		GetDeployLogs func() string
 		Namespace     string
 		AssertDC      func(t *testing.T, dc *dcapi.DeploymentConfig)
 		Calls         map[string]int
@@ -117,6 +118,9 @@ func TestMysqlConfiguration(t *testing.T) {
 			},
 			MysqlSvc: func() []api.Service {
 				return getMysqlsc()
+			},
+			GetDeployLogs: func() string {
+				return "Success"
 			},
 			DcToConfigure: func() *dcapi.DeploymentConfig {
 				dc := deployingConfig()
@@ -176,6 +180,9 @@ func TestMysqlConfiguration(t *testing.T) {
 			MysqlSvc: func() []api.Service {
 				return getMysqlsc()
 			},
+			GetDeployLogs: func() string {
+				return "Success"
+			},
 			DcToConfigure: func() *dcapi.DeploymentConfig {
 				dc := deployingConfig()
 				dc.Spec.Template.Spec.Containers[0].Env = append(dc.Spec.Template.Spec.Containers[0].Env, api.EnvVar{
@@ -227,6 +234,9 @@ func TestMysqlConfiguration(t *testing.T) {
 			MysqlSvc: func() []api.Service {
 				return []api.Service{}
 			},
+			GetDeployLogs: func() string {
+				return "Success"
+			},
 			DcToConfigure: func() *dcapi.DeploymentConfig {
 				dc := deployingConfig()
 				return &dc
@@ -256,6 +266,9 @@ func TestMysqlConfiguration(t *testing.T) {
 			MysqlSvc: func() []api.Service {
 				return getMysqlsc()
 			},
+			GetDeployLogs: func() string {
+				return "Success"
+			},
 			DcToConfigure: func() *dcapi.DeploymentConfig {
 				dc := deployingConfig()
 				return &dc
@@ -274,6 +287,7 @@ func TestMysqlConfiguration(t *testing.T) {
 			client.Returns["FindDeploymentConfigsByLabel"] = tc.MysqlDC()
 			client.Returns["FindServiceByLabel"] = tc.MysqlSvc()
 			client.Returns["FindJobByName"] = tc.MysqlJob()
+			client.Returns["GetDeployLogs"] = tc.GetDeployLogs()
 			configure := factory.Factory("data-mysql", &deploy.Configuration{InstanceID: "instance", Action: "provision"}, &sync.WaitGroup{})
 			dc, err := configure.Configure(client, tc.DcToConfigure(), tc.Namespace)
 			if tc.ExpectError && err == nil {

@@ -13,7 +13,7 @@ var DataMysqlConfigJob = `
 	}
   },
   "spec": {
-	"activeDeadlineSeconds": 20,
+	"activeDeadlineSeconds": 120,
     "template": {
       "metadata": {
         "name": "{{index . "name"}}-dataconfig-job"
@@ -22,7 +22,7 @@ var DataMysqlConfigJob = `
         "containers": [
           {
             "name": "datamysqlconfig",
-            "image": "feedhenry/negotiator:0.0.11",
+            "image": "feedhenry/negotiator:0.0.14",
             "command": ["jobs",
               "datamysqlconfig",
               "--host={{if isset . "dbhost"}}{{ index . "dbhost"}}{{end}}",

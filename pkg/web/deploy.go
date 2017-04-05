@@ -50,6 +50,7 @@ func (d Deploy) Deploy(res http.ResponseWriter, req *http.Request) {
 		nameSpace = params["nameSpace"]
 		payload   = &deploy.Payload{}
 	)
+	res.Header().Add("Content-Type", "Application/JSON")
 	if err := decoder.Decode(payload); err != nil {
 		d.handleDeployError(err, "failed to decode json "+err.Error(), res)
 		return
