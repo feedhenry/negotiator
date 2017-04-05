@@ -5,7 +5,6 @@ import (
 
 	"time"
 
-	"github.com/feedhenry/negotiator/pkg/deploy"
 	"github.com/go-redis/redis"
 	"github.com/pkg/errors"
 )
@@ -39,9 +38,17 @@ func New(client *redis.Client) *RedisRetrieverPublisher {
 	}
 }
 
+// Status represent the current status of the configuration
+type Status struct {
+	Status      string    `json:"status"`
+	Description string    `json:"description"`
+	Log         []string  `json:"log"`
+	Started     time.Time `json:"-"`
+}
+
 // Get will retrieve a given status by key
-func (rp *RedisRetrieverPublisher) Get(key string) (*deploy.Status, error) {
-	var ret = deploy.Status{}
+func (rp *RedisRetrieverPublisher) Get(key string) (*Status, error) {
+	var ret = Status{}
 	val, err := rp.Client.Get(key).Result()
 	if err == redis.Nil {
 		return nil, &ErrStatusNotExist{statusKey: key}
@@ -64,7 +71,7 @@ func (rp *RedisRetrieverPublisher) Clear(key string) error {
 func (rp *RedisRetrieverPublisher) Publish(key string, status, description string) error {
 	val, err := rp.Get(key)
 	if IsErrStatusNotExists(err) {
-		val = &deploy.Status{}
+		val = &Status{}
 	} else if err != nil {
 		return errors.Wrap(err, "unexpected error in Publish ")
 	}

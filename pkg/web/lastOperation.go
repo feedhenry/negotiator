@@ -13,7 +13,7 @@ import (
 
 // StatusRetriever defines how deploy status should be retrieved
 type StatusRetriever interface {
-	Get(key string) (*deploy.Status, error)
+	Get(key string) (*status.Status, error)
 }
 
 // LastOperationHandler handles returning the status of the last operation on a service. For example a provision

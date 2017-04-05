@@ -92,6 +92,7 @@ type PushApplication struct {
 
 // Configure the Push vars here
 func (p *PushUpsConfigure) Configure(client Client, deployment *dc.DeploymentConfig, namespace string) (*dc.DeploymentConfig, error) {
+
 	pushConfigPath := "/opt/rh/push-config"
 	// find the push route
 	route, err := client.FindRouteByName(namespace, "push-ups")

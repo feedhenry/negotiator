@@ -20,7 +20,6 @@ type DataMongoConfigure struct {
 	StatusPublisher StatusPublisher
 	statusKey       string
 	TemplateLoader  TemplateLoader
-	status          *Status
 	logger          log.Logger
 	wait            *sync.WaitGroup
 }

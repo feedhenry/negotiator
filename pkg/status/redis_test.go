@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/feedhenry/negotiator/pkg/config"
-	"github.com/feedhenry/negotiator/pkg/deploy"
 	"github.com/feedhenry/negotiator/pkg/status"
 	redis "github.com/go-redis/redis"
 )
@@ -24,7 +23,7 @@ func TestStatus(t *testing.T) {
 		ExpectPublishError bool
 		GetKey             string
 		PubKey             string
-		Assert             func(cs *deploy.Status) error
+		Assert             func(cs *status.Status) error
 	}{
 		{
 			Name:               "test publish and get configuration status",
@@ -34,7 +33,7 @@ func TestStatus(t *testing.T) {
 			ExpectPublishError: false,
 			PubKey:             "test",
 			GetKey:             "test",
-			Assert: func(cs *deploy.Status) error {
+			Assert: func(cs *status.Status) error {
 				if cs == nil {
 					return fmt.Errorf("expected a ConfigurationStatus but got none")
 				}
@@ -49,7 +48,7 @@ func TestStatus(t *testing.T) {
 			ExpectPublishError: false,
 			PubKey:             "test",
 			GetKey:             "notthere",
-			Assert: func(cs *deploy.Status) error {
+			Assert: func(cs *status.Status) error {
 				if cs != nil {
 					return fmt.Errorf("expected NOT to get a ConfigurationStatus but got one")
 				}
