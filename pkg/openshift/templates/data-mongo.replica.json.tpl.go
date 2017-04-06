@@ -7,6 +7,9 @@ var DataMongoReplicaTemplate = `
   "apiVersion": "v1",
   "metadata": {
     "name": "mongodb",
+    "labels": {
+      "deployed": "false"
+    },
     "annotations": {
       "description": "Mongodb",
       "tags": "rhmap,mongodb"
@@ -72,7 +75,7 @@ var DataMongoReplicaTemplate = `
         "name": "mongodb-3",
         "labels": {
           "name": "mongodb-3",
-		  "rhmap/domain": "{{.Domain}}",
+		      "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
           "rhmap/name": "data-mongo",
@@ -182,11 +185,12 @@ var DataMongoReplicaTemplate = `
         "name": "mongodb-1",
         "labels": {
           "name": "mongodb",
-		  "rhmap/domain": "{{.Domain}}",
+		      "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
           "rhmap/name": "data-mongo",
-          "rhmap/type":"environmentService"
+          "rhmap/type":"environmentService",
+          "deployed": "false"
         }
       },
       "spec": {

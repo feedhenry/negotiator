@@ -58,9 +58,9 @@ func Metrics(r *mux.Router) {
 }
 
 // Templates sets up the template route handler for the web interface
-func Templates(r *mux.Router, templateLoader deploy.TemplateLoader) {
-	templateHandler := NewTemplateHandler(templateLoader)
-	r.Handle("/service/templates", prometheus.InstrumentHandlerFunc("getTemplates", templateHandler.List)).Methods("GET")
+func Templates(r *mux.Router, templateLoader deploy.TemplateLoader, clientfactory DeployClientFactory) {
+	templateHandler := NewTemplateHandler(templateLoader, clientfactory)
+	r.Handle("/service/templates", prometheus.InstrumentHandlerFunc("getTemplates", templateHandler.MarkServices)).Methods("GET")
 }
 
 // LastOperation sets up the LastOperationHandler and route that is used to retrieve the last operation and status of an operation performed on a service

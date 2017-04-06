@@ -6,6 +6,7 @@ import (
 	"math/rand"
 
 	"github.com/openshift/origin/pkg/template/api"
+	"github.com/prometheus/common/log"
 	"k8s.io/kubernetes/pkg/runtime"
 
 	"path/filepath"
@@ -20,6 +21,7 @@ import (
 
 // PackagedTemplates map of locally stored templates
 var PackagedTemplates = map[string]string{}
+var ServiceTemplates = map[string]string{}
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
@@ -32,6 +34,13 @@ func init() {
 	PackagedTemplates["data-mysql"] = templates.DataMySQLTemplate
 	PackagedTemplates["data-mysql-job"] = templates.DataMysqlConfigJob
 	PackagedTemplates["push-ups"] = templates.PushUPSTemplate
+
+	ServiceTemplates["cloudapp"] = templates.CloudAppTemplate
+	ServiceTemplates["cache-redis"] = templates.CacheRedisTemplate
+	ServiceTemplates["data-mongo"] = templates.DataMongoTemplate
+	ServiceTemplates["data-mongo-replica"] = templates.DataMongoReplicaTemplate
+	ServiceTemplates["data-mysql"] = templates.DataMySQLTemplate
+	ServiceTemplates["push-ups"] = templates.PushUPSTemplate
 }
 
 func (tl *templateLoaderDecoder) Load(name string) (*template.Template, error) {
@@ -108,13 +117,14 @@ func (tl *templateLoaderDecoder) Decode(data []byte) (*deploy.Template, error) {
 	return &deploy.Template{Template: tmpl}, nil
 }
 
-func (tl *templateLoaderDecoder) List() ([]*deploy.Template, error) {
+func (tl *templateLoaderDecoder) ListServices() ([]*deploy.Template, error) {
 	var err error
 	var t *template.Template
 	var ts []*deploy.Template
-	for v := range PackagedTemplates {
+	for v := range ServiceTemplates {
 		t, err = tl.Load(v)
 		if err != nil {
+			log.Error(err.Error())
 			break
 		}
 		var buf bytes.Buffer
@@ -139,4 +149,18 @@ func (tl *templateLoaderDecoder) FindInTemplate(t *api.Template, resource string
 
 	}
 	return nil, errors.New("resource not found in template " + resource)
+}
+
+// MarkServices mark services that are deployed to true
+func MarkServices(ts []*deploy.Template, services []kapi.Service) {
+	for _, template := range ts {
+		for _, service := range services {
+			if service.Name == template.Name {
+				//if _, ok := template.Template.Labels["deployed"]; ok {
+				template.Template.Labels["deployed"] = "true"
+				log.Info("Template %s deployed set to true ", template.Name)
+				//}
+			}
+		}
+	}
 }

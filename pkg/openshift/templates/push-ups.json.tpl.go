@@ -8,6 +8,9 @@ var PushUPSTemplate = `
   	"apiVersion": "v1",
   	"metadata": {
     	"name": "RHMAP UPS",
+			"labels": {
+        "deployed": "false"
+      },
     	"annotations": {
 			"description": "RHMAP ups",
 			"dependencies": "data-mysql",
@@ -85,7 +88,8 @@ var PushUPSTemplate = `
 					"rhmap/guid": "{{ generatedPass }}",
 					"rhmap/project": "{{.ProjectGUID}}",
 					"rhmap/name": "push-ups",
-					"rhmap/type":"environmentService"
+					"rhmap/type":"environmentService",
+					"deployed": "false"
 				},
 				"annotations": {
 					"description": "Defines how to deploy the UPS push service"
