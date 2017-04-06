@@ -49,8 +49,10 @@ func main() {
 		logrus.Info("using redis publisher")
 		redisOpts := conf.Redis()
 		redisClient := redis.NewClient(&redisOpts)
-		pubRet := status.New(redisClient)
-		statusRetriever = pubRet // it implments both interfaces
+		redisPub := status.New(redisClient)
+		logPub := &status.LogStatusPublisher{}
+		pubRet := status.NewMultiStatus(redisPub, logPub, logger)
+		statusRetriever = redisPub // it implments both interfaces
 		statusPublisher = pubRet
 	}
 	// deploy setup

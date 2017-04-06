@@ -10,11 +10,12 @@ import (
 
 	"time"
 
+	"sync"
+
 	"github.com/feedhenry/negotiator/pkg/log"
 	dc "github.com/openshift/origin/pkg/deploy/api"
 	"github.com/pkg/errors"
 	k8api "k8s.io/kubernetes/pkg/api"
-	"sync"
 )
 
 // PushUpsConfigure is an object for configuring push connection variables

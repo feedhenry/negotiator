@@ -22,6 +22,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/feedhenry/negotiator/pkg/deploy"
 	"github.com/feedhenry/negotiator/pkg/openshift"
+	"github.com/feedhenry/negotiator/pkg/status"
 	"github.com/spf13/cobra"
 )
 
@@ -44,7 +45,7 @@ var deployCmd = &cobra.Command{
 		}
 		template := args[0]
 		logger := logrus.StandardLogger()
-		lsp := deploy.LogStatusPublisher{Logger: logger}
+		lsp := &status.LogStatusPublisher{Logger: logger}
 		serviceConfigFactory := &deploy.ConfigurationFactory{StatusPublisher: lsp, Logger: logger}
 		serviceConfigController := deploy.NewEnvironmentServiceConfigController(serviceConfigFactory, logger, nil, tl)
 		deployController := deploy.New(tl, tl, logger, serviceConfigController, lsp)

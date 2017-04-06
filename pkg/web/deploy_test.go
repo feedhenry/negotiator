@@ -15,6 +15,7 @@ import (
 	"github.com/feedhenry/negotiator/pkg/deploy"
 	"github.com/feedhenry/negotiator/pkg/mock"
 	"github.com/feedhenry/negotiator/pkg/openshift"
+	"github.com/feedhenry/negotiator/pkg/status"
 	"github.com/feedhenry/negotiator/pkg/web"
 	bc "github.com/openshift/origin/pkg/build/api"
 )
@@ -28,7 +29,7 @@ func setUpDeployHandler() http.Handler {
 	logrus.SetFormatter(&logrus.JSONFormatter{})
 	logger := logrus.StandardLogger()
 	templates := openshift.NewTemplateLoaderDecoder("")
-	lsp := deploy.LogStatusPublisher{Logger: logger}
+	lsp := &status.LogStatusPublisher{Logger: logger}
 	serviceConfigFactory := &deploy.ConfigurationFactory{StatusPublisher: lsp}
 	serviceConfigController := deploy.NewEnvironmentServiceConfigController(serviceConfigFactory, logger, nil, templates)
 	deployController := deploy.New(templates, templates, logger, serviceConfigController, lsp)

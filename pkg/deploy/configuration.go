@@ -2,7 +2,6 @@ package deploy
 
 import (
 	"math/rand"
-	"time"
 
 	"github.com/pkg/errors"
 
@@ -11,26 +10,13 @@ import (
 	"fmt"
 
 	"sync"
+	"time"
 
-	"github.com/feedhenry/negotiator/pkg/log"
-	dc "github.com/openshift/origin/pkg/deploy/api"
 	"github.com/feedhenry/negotiator/pkg/config"
+	"github.com/feedhenry/negotiator/pkg/log"
+	"github.com/feedhenry/negotiator/pkg/status"
+	dc "github.com/openshift/origin/pkg/deploy/api"
 )
-
-// LogStatusPublisher publishes the status to the log
-type LogStatusPublisher struct {
-	Logger log.Logger
-}
-
-// Publish is called to send something new to the log
-func (lsp LogStatusPublisher) Publish(key string, status, description string) error {
-	lsp.Logger.Info(key, status, description)
-	return nil
-}
-
-func (lsp LogStatusPublisher) Clear(key string) error {
-	return nil
-}
 
 // StatusKey returns a key for logging information against
 func StatusKey(instanceID, operation string) string {
@@ -87,14 +73,6 @@ func (cf *ConfigurationFactory) Factory(service string, config *Configuration, w
 	panic("unknown service type cannot configure")
 }
 
-// Status represent the current status of the configuration
-type Status struct {
-	Status      string    `json:"status"`
-	Description string    `json:"description"`
-	Log         []string  `json:"log"`
-	Started     time.Time `json:"-"`
-}
-
 // StatusPublisher defines what a status publisher should implement
 type StatusPublisher interface {
 	Publish(key string, status, description string) error
@@ -117,7 +95,7 @@ type EnvironmentServiceConfigController struct {
 // NewEnvironmentServiceConfigController returns a new EnvironmentServiceConfigController
 func NewEnvironmentServiceConfigController(configFactory ServiceConfigFactory, log log.Logger, publisher StatusPublisher, tl TemplateLoader) *EnvironmentServiceConfigController {
 	if nil == publisher {
-		publisher = LogStatusPublisher{Logger: log}
+		publisher = status.LogStatusPublisher{Logger: log}
 	}
 	return &EnvironmentServiceConfigController{
 		ConfigurationFactory: configFactory,
@@ -207,14 +185,14 @@ func waitForService(client Client, namespace, serviceName string) error {
 	for {
 		select {
 		case <-timeout:
-		//timed out, exit
+			//timed out, exit
 			return errors.New("timed out waiting for dependency: " + serviceName + " to deploy")
 		default:
 			body, err := client.GetDeployLogs(namespace, serviceName)
 			if err != nil {
 				continue
 			}
-		// if success move on to configure job
+			// if success move on to configure job
 			if strings.Contains(strings.ToLower(body), "success") {
 				return nil
 			}

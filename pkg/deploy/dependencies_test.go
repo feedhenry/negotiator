@@ -9,6 +9,7 @@ import (
 	"github.com/feedhenry/negotiator/pkg/deploy"
 	"github.com/feedhenry/negotiator/pkg/mock"
 	"github.com/feedhenry/negotiator/pkg/openshift"
+	"github.com/feedhenry/negotiator/pkg/status"
 	dcapi "github.com/openshift/origin/pkg/deploy/api"
 	"k8s.io/kubernetes/pkg/api"
 )
@@ -96,7 +97,7 @@ func TestDeployWithDependencies(t *testing.T) {
 	}
 	tl := openshift.NewTemplateLoaderDecoder("../resources/templates/")
 	logger := logrus.StandardLogger()
-	lsp := deploy.LogStatusPublisher{Logger: logger}
+	lsp := status.LogStatusPublisher{Logger: logger}
 	for _, tc := range cases {
 		t.Run(tc.TestName, func(t *testing.T) {
 			pc := mock.NewPassClient()
