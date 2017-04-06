@@ -10,11 +10,12 @@ import (
 	"fmt"
 
 	"sync"
+	"time"
 
+	"github.com/feedhenry/negotiator/pkg/config"
 	"github.com/feedhenry/negotiator/pkg/log"
 	"github.com/feedhenry/negotiator/pkg/status"
 	dc "github.com/openshift/origin/pkg/deploy/api"
-	"github.com/feedhenry/negotiator/pkg/config"
 )
 
 // StatusKey returns a key for logging information against
@@ -184,14 +185,14 @@ func waitForService(client Client, namespace, serviceName string) error {
 	for {
 		select {
 		case <-timeout:
-		//timed out, exit
+			//timed out, exit
 			return errors.New("timed out waiting for dependency: " + serviceName + " to deploy")
 		default:
 			body, err := client.GetDeployLogs(namespace, serviceName)
 			if err != nil {
 				continue
 			}
-		// if success move on to configure job
+			// if success move on to configure job
 			if strings.Contains(strings.ToLower(body), "success") {
 				return nil
 			}
