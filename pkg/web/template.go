@@ -2,7 +2,6 @@ package web
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/feedhenry/negotiator/pkg/deploy"
@@ -30,22 +29,24 @@ func (s TemplateHandler) MarkServices(res http.ResponseWriter, req *http.Request
 	res.Header().Add("Content-type", "application/json")
 	ts, err := s.templateLoader.ListServices()
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 	}
 
 	ns := req.URL.Query().Get("env")
 	if ns != "" {
-		log.Info("parameter env found : " + ns)
+		log.Debug("parameter env found : " + ns)
 		// get a list of deployed templates
 		host := req.Header.Get("X-RHMAP-HOST")
 		token := req.Header.Get("X-RHMAP-TOKEN")
 
+		log.Debug("headers found : " + host + ":" + token)
+
 		if host == "" || token == "" {
-			http.Error(res, "parameters for host/token are missing", http.StatusNotAcceptable)
+			// we just log as error and return the templates 'unmarked'
+			log.Error("headers for host/token are missing")
+			json.NewEncoder(res).Encode(ts)
 			return
 		}
-
-		log.Debug("parameters host and token found : " + host + ":" + token)
 
 		client, err := s.clientFactory.DefaultDeployClient(host, token)
 		if err != nil {
@@ -53,8 +54,7 @@ func (s TemplateHandler) MarkServices(res http.ResponseWriter, req *http.Request
 			return
 		}
 
-		// TODO services, err := client.FindServiceByLabel(ns, map[string]string{"rhmap/type": "environmentService"})
-		services, err := client.FindServiceByLabel(ns, map[string]string{})
+		services, err := client.FindServiceByLabel(ns, map[string]string{"rhmap/type": "environmentService"})
 
 		if err != nil {
 			http.Error(res, err.Error(), http.StatusInternalServerError)

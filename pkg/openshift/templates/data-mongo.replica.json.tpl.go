@@ -8,7 +8,8 @@ var DataMongoReplicaTemplate = `
   "metadata": {
     "name": "mongodb",
     "labels": {
-      "deployed": "false"
+      "deployed": "false",
+      "rhmap/name": "data-mongo"
     },
     "annotations": {
       "description": "Mongodb",

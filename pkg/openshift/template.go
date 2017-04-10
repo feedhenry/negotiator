@@ -21,6 +21,8 @@ import (
 
 // PackagedTemplates map of locally stored templates
 var PackagedTemplates = map[string]string{}
+
+// ServiceTemplates map of locally stored templates without job templates
 var ServiceTemplates = map[string]string{}
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -155,11 +157,9 @@ func (tl *templateLoaderDecoder) FindInTemplate(t *api.Template, resource string
 func MarkServices(ts []*deploy.Template, services []kapi.Service) {
 	for _, template := range ts {
 		for _, service := range services {
-			if service.Name == template.Name {
-				//if _, ok := template.Template.Labels["deployed"]; ok {
+			if service.Labels["rhmap/name"] != "" && service.Labels["rhmap/name"] == template.Labels["rhmap/name"] {
 				template.Template.Labels["deployed"] = "true"
-				log.Info("Template %s deployed set to true ", template.Name)
-				//}
+				log.Info("Template " + template.Name + " deployed set to true ")
 			}
 		}
 	}

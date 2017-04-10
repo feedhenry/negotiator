@@ -7,7 +7,7 @@ var DataMysqlConfigJob = `
   "apiVersion": "batch/v1",
   "kind": "Job",
   "metadata": {
-    "name": "{{if isset . "name"}}{{ index . "name"}}{{end}-mysql-dataconfig-job",
+    "name": "{{ index . "name"}}-mysql-dataconfig-job",
 	  "labels": {
 		  "rhmap/name":"datamysqlconfig",
       "rhmap/type":"job"
@@ -17,7 +17,7 @@ var DataMysqlConfigJob = `
 	"activeDeadlineSeconds": 120,
     "template": {
       "metadata": {
-        "name": "{{if isset . "name"}}{{ index . "name"}}{{end}-dataconfig-job"
+        "name": "{{ index . "name"}}-dataconfig-job"
       },
       "spec": {
         "containers": [

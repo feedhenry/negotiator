@@ -7,9 +7,10 @@ var CacheRedisTemplate = `
     "kind": "Template",
     "apiVersion": "v1",
     "metadata": {
-        "name": "cache",
+        "name": "Redis",
         "labels": {
-          "deployed": "false"
+          "deployed": "false",
+          "rhmap/name": "cache-redis"
         },
         "annotations": {
             "description": "Redis is an in-memory data structure store, used as a database, cache and message broker",
@@ -29,7 +30,8 @@ var CacheRedisTemplate = `
                     "rhmap/env": "{{.Env}}",
                     "rhmap/guid": "{{.CloudAppGUID}}",
                     "rhmap/project": "{{.ProjectGUID}}",
-                    "rhmap/type":"environmentService"
+                    "rhmap/type":"environmentService",
+                    "rhmap/name": "cache-redis"
                 }
             },
             "spec": {

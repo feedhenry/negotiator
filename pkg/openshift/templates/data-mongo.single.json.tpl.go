@@ -8,7 +8,8 @@ var DataMongoTemplate = `
   "metadata": {
     "name": "data-mongo",
     "labels": {
-      "deployed": "false"
+      "deployed": "false",
+      "rhmap/name": "data-mongo"
     },
     "annotations": {
       "description": "Mongodb",

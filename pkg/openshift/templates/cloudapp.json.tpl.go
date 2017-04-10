@@ -9,7 +9,8 @@ var CloudAppTemplate = `
   "metadata": {
     "name": "cloudapp",
     "labels": {
-      "deployed": "false"
+      "deployed": "false",
+      "rhmap/name": "{{.ServiceName}}"
     },
     "annotations": {
       "description": "cloudApp",

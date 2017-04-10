@@ -9,7 +9,8 @@ var PushUPSTemplate = `
   	"metadata": {
     	"name": "RHMAP UPS",
 			"labels": {
-        "deployed": "false"
+        "deployed": "false",
+				"rhmap/name": "push-ups"
       },
     	"annotations": {
 			"description": "RHMAP ups",

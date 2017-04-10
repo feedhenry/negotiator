@@ -9,7 +9,8 @@ var DataMySQLTemplate = `
     "metadata": {
         "name": "mysql-persistent",
         "labels": {
-          "deployed": "false"
+          "deployed": "false",
+          "rhmap/name": "data-mysql"
         },
         "annotations": {
             "description": "MySQL database service, with persistent storage.  Scaling to more than one replica is not supported.  You must have persistent volumes available in your cluster to use this template.",

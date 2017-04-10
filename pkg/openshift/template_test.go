@@ -11,19 +11,26 @@ import (
 
 func TestMarkServices(t *testing.T) {
 
+	labels := make(map[string]string)
+	labels["rhmap/name"] = "TestApp"
+	labels["deployed"] = "false"
+
 	ts := []*deploy.Template{
 		{
 			Template: &api.Template{ObjectMeta: kapi.ObjectMeta{
 				Name:   "Test",
-				Labels: map[string]string{},
+				Labels: labels,
 			},
 			},
 		}}
 
+	svcLabels := make(map[string]string)
+	svcLabels["rhmap/name"] = "TestApp"
 	services := []kapi.Service{
 		{
 			ObjectMeta: kapi.ObjectMeta{
-				Name: "Test",
+				Name:   "Test",
+				Labels: svcLabels,
 			},
 		},
 	}

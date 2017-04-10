@@ -30,13 +30,13 @@ func TestMarkServices(t *testing.T) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 
-	// expect a failure (we dont have headers)
+	// all should be good with missing headers
 	res, err := client.Do(req)
-	if res.StatusCode != 406 {
-		t.Fatalf("iexpected code %v but got %v", 406, res.StatusCode)
+	if res.StatusCode != 200 {
+		t.Fatalf("expected code %v but got %v", 200, res.StatusCode)
 	}
 
-	// all should work now:we
+	// all should work now
 	req.Header.Set("X-RHMAP-HOST", "somehost")
 	req.Header.Set("X-RHMAP-TOKEN", "sometoken")
 	res, err = client.Do(req)
