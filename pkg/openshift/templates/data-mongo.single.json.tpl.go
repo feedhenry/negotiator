@@ -7,6 +7,10 @@ var DataMongoTemplate = `
   "apiVersion": "v1",
   "metadata": {
     "name": "data-mongo",
+    "labels": {
+      "deployed": "false",
+      "rhmap/name": "data-mongo"
+    },
     "annotations": {
       "description": "Mongodb",
       "tags": "rhmap,mongodb"
@@ -85,7 +89,8 @@ var DataMongoTemplate = `
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
           "rhmap/name": "data-mongo",
-          "rhmap/type":"environmentService"
+          "rhmap/type":"environmentService",
+          "deployed": "false"
         }
       },
       "spec": {

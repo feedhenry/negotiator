@@ -8,6 +8,10 @@ var CloudAppTemplate = `
   "apiVersion": "v1",
   "metadata": {
     "name": "cloudapp",
+    "labels": {
+      "deployed": "false",
+      "rhmap/name": "{{.ServiceName}}"
+    },
     "annotations": {
       "description": "cloudApp",
       "dependenices": "",
@@ -78,7 +82,8 @@ var CloudAppTemplate = `
           "rhmap/project": "{{.ProjectGUID}}",
           "rhmap/title": "{{.ServiceName}}",
           "rhmap/type": "cloudapp",
-          "rhmap/name": "{{.ServiceName}}"
+          "rhmap/name": "{{.ServiceName}}",
+          "deployed" : "false"
         },
         "annotations": {
           "description": "Defines how to build the application",
@@ -218,7 +223,8 @@ var CloudAppTemplate = `
           "rhmap/project": "{{.ProjectGUID}}",
           "rhmap/title": "{{.ServiceName}}",
           "rhmap/type": "cloudapp",
-          "rhmap/name": "{{.ServiceName}}"
+          "rhmap/name": "{{.ServiceName}}",
+          "deployed" : "false"
         },
         "annotations": {
           "description": "Defines how to deploy the application server",

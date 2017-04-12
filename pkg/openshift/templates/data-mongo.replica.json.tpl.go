@@ -6,7 +6,11 @@ var DataMongoReplicaTemplate = `
   "kind": "Template",
   "apiVersion": "v1",
   "metadata": {
-    "name": "mongodb",
+    "name": "data-mongo-replica",
+    "labels": {
+      "deployed": "false",
+      "rhmap/name": "data-mongo-replica"
+    },
     "annotations": {
       "description": "Mongodb",
       "tags": "rhmap,mongodb"
@@ -23,7 +27,7 @@ var DataMongoReplicaTemplate = `
           "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
-          "rhmap/name": "data-mongo",
+          "rhmap/name": "data-mongo-replica",
           "rhmap/type":"environmentService"
         }
       },
@@ -49,7 +53,7 @@ var DataMongoReplicaTemplate = `
           "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
-          "rhmap/name": "data-mongo",
+          "rhmap/name": "data-mongo-replica",
           "rhmap/type":"environmentService"
         }
       },
@@ -72,10 +76,10 @@ var DataMongoReplicaTemplate = `
         "name": "mongodb-3",
         "labels": {
           "name": "mongodb-3",
-		  "rhmap/domain": "{{.Domain}}",
+		      "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
-          "rhmap/name": "data-mongo",
+          "rhmap/name": "data-mongo-replica",
           "rhmap/type":"environmentService"
         }
       },
@@ -100,7 +104,7 @@ var DataMongoReplicaTemplate = `
 		  "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
-          "rhmap/name": "data-mongo",
+          "rhmap/name": "data-mongo-replica",
           "rhmap/type":"environmentService"
         }
       },
@@ -128,7 +132,7 @@ var DataMongoReplicaTemplate = `
 		  "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
-          "rhmap/name": "data-mongo",
+          "rhmap/name": "data-mongo-replica",
           "rhmap/type":"environmentService"
         }
       },
@@ -156,7 +160,7 @@ var DataMongoReplicaTemplate = `
 		  "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
-          "rhmap/name": "data-mongo",
+          "rhmap/name": "data-mongo-replica",
           "rhmap/type":"environmentService"
         }
       },
@@ -182,11 +186,12 @@ var DataMongoReplicaTemplate = `
         "name": "mongodb-1",
         "labels": {
           "name": "mongodb",
-		  "rhmap/domain": "{{.Domain}}",
+		      "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
-          "rhmap/name": "data-mongo",
-          "rhmap/type":"environmentService"
+          "rhmap/name": "data-mongo-replica",
+          "rhmap/type":"environmentService",
+          "deployed": "false"
         }
       },
       "spec": {
@@ -219,7 +224,7 @@ var DataMongoReplicaTemplate = `
 			  "rhmap/domain": "{{.Domain}}",
               "rhmap/env": "{{.Env}}",
               "rhmap/title": "{{.ServiceName}}",
-              "rhmap/name": "data-mongo",
+              "rhmap/name": "data-mongo-replica",
               "rhmap/type":"environmentService"
             }
           },
@@ -292,7 +297,7 @@ var DataMongoReplicaTemplate = `
 		  "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
-          "rhmap/name": "data-mongo",
+          "rhmap/name": "data-mongo-replica",
           "rhmap/type":"environmentService"
         }
       },
@@ -326,7 +331,7 @@ var DataMongoReplicaTemplate = `
 			  "rhmap/domain": "{{.Domain}}",
               "rhmap/env": "{{.Env}}",
               "rhmap/title": "{{.ServiceName}}",
-              "rhmap/name": "data-mongo",
+              "rhmap/name": "data-mongo-replica",
               "rhmap/type":"environmentService"
             }
           },
@@ -395,7 +400,7 @@ var DataMongoReplicaTemplate = `
 		  "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
-          "rhmap/name": "data-mongo",
+          "rhmap/name": "data-mongo-replica",
           "rhmap/type":"environmentService"
         }
       },
@@ -429,7 +434,7 @@ var DataMongoReplicaTemplate = `
 			  "rhmap/domain": "{{.Domain}}",
               "rhmap/env": "{{.Env}}",
               "rhmap/title": "{{.ServiceName}}",
-              "rhmap/name": "data-mongo",
+              "rhmap/name": "data-mongo-replica",
               "rhmap/type":"environmentService"
             }
           },
@@ -498,7 +503,7 @@ var DataMongoReplicaTemplate = `
 		  "rhmap/domain": "{{.Domain}}",
           "rhmap/env": "{{.Env}}",
           "rhmap/title": "{{.ServiceName}}",
-          "rhmap/name": "data-mongo",
+          "rhmap/name": "data-mongo-replica",
           "rhmap/type":"environmentService"
         }
       },

@@ -8,6 +8,10 @@ var CacheRedisTemplate = `
     "apiVersion": "v1",
     "metadata": {
         "name": "Redis",
+        "labels": {
+          "deployed": "false",
+          "rhmap/name": "cache-redis"
+        },
         "annotations": {
             "description": "Redis is an in-memory data structure store, used as a database, cache and message broker",
             "dependencies": "",
@@ -25,7 +29,9 @@ var CacheRedisTemplate = `
                     "rhmap/domain": "{{.Domain}}",
                     "rhmap/env": "{{.Env}}",
                     "rhmap/guid": "{{.CloudAppGUID}}",
-                    "rhmap/project": "{{.ProjectGUID}}"
+                    "rhmap/project": "{{.ProjectGUID}}",
+                    "rhmap/type":"environmentService",
+                    "rhmap/name": "cache-redis"
                 }
             },
             "spec": {
@@ -55,7 +61,8 @@ var CacheRedisTemplate = `
                     "rhmap/guid": "{{.CloudAppGUID}}",
                     "rhmap/project": "{{.ProjectGUID}}",
                     "rhmap/name": "cache-redis",
-                    "rhmap/type":"environmentService"
+                    "rhmap/type":"environmentService",
+                    "deployed" : "false"
                 },
                 "annotations": {
                     "description": "Defines how to deploy the redis caching layer"

@@ -30,7 +30,7 @@ import (
 // TemplateLoader defines how deploy wants to load templates in order to be able to deploy them.
 type TemplateLoader interface {
 	Load(name string) (*template.Template, error)
-	List() ([]*Template, error)
+	ListServices() ([]*Template, error)
 	FindInTemplate(t *api.Template, resource string) (interface{}, error)
 }
 

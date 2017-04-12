@@ -79,7 +79,7 @@ func main() {
 	}
 	// templates setup
 	{
-		web.Templates(router, templates)
+		web.Templates(router, templates, clientFactory)
 	}
 	// LastOperation setup
 	{

@@ -8,7 +8,8 @@ var DataMongoConfigJob = `
   "metadata": {
     "name": "{{index . "name"}}-mongo-dataconfig-job",
 	"labels": {
-		"rhmap/name":"datamongoconfig"
+		"rhmap/name":"datamongoconfig",
+		"rhmap/type":"job"
 	}
   },
   "spec": {

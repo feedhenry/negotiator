@@ -8,6 +8,10 @@ var DataMySQLTemplate = `
     "apiVersion": "v1",
     "metadata": {
         "name": "mysql-persistent",
+        "labels": {
+          "deployed": "false",
+          "rhmap/name": "data-mysql"
+        },
         "annotations": {
             "description": "MySQL database service, with persistent storage.  Scaling to more than one replica is not supported.  You must have persistent volumes available in your cluster to use this template.",
             "iconClass": "icon-mysql-database",
@@ -74,7 +78,8 @@ var DataMySQLTemplate = `
                     "rhmap/env": "{{.Env}}",
                     "rhmap/project": "{{.ProjectGUID}}",
                     "rhmap/name": "data-mysql",
-                    "rhmap/type":"environmentService"
+                    "rhmap/type":"environmentService",
+                    "deployed": "false"
                 }
             },
             "spec": {

@@ -7,16 +7,17 @@ var DataMysqlConfigJob = `
   "apiVersion": "batch/v1",
   "kind": "Job",
   "metadata": {
-    "name": "{{index . "name"}}-mysql-dataconfig-job",
-	"labels": {
-		"rhmap/name":"datamysqlconfig"
-	}
+    "name": "{{ index . "name"}}-mysql-dataconfig-job",
+	  "labels": {
+		  "rhmap/name":"datamysqlconfig",
+      "rhmap/type":"job"
+	  }
   },
   "spec": {
 	"activeDeadlineSeconds": 120,
     "template": {
       "metadata": {
-        "name": "{{index . "name"}}-dataconfig-job"
+        "name": "{{ index . "name"}}-dataconfig-job"
       },
       "spec": {
         "containers": [
