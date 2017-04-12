@@ -34,12 +34,9 @@ func (s TemplateHandler) MarkServices(res http.ResponseWriter, req *http.Request
 
 	ns := req.URL.Query().Get("env")
 	if ns != "" {
-		log.Debug("parameter env found : " + ns)
 		// get a list of deployed templates
 		host := req.Header.Get("X-RHMAP-HOST")
 		token := req.Header.Get("X-RHMAP-TOKEN")
-
-		log.Debug("headers found : " + host + ":" + token)
 
 		if host == "" || token == "" {
 			// we just log as error and return the templates 'unmarked'
@@ -63,10 +60,6 @@ func (s TemplateHandler) MarkServices(res http.ResponseWriter, req *http.Request
 
 		openshift.MarkServices(ts, services)
 
-	} else {
-		// no env parameter - just return the list
-		json.NewEncoder(res).Encode(ts)
-		return
 	}
 
 	if err := json.NewEncoder(res).Encode(ts); err != nil {

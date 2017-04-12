@@ -6,7 +6,7 @@ var DataMongoConfigJob = `
   "apiVersion": "batch/v1",
   "kind": "Job",
   "metadata": {
-    "name": "{{if isset . "name"}}{{index . "name"}}{{end}}-mongo-dataconfig-job",
+    "name": "{{index . "name"}}-mongo-dataconfig-job",
 	"labels": {
 		"rhmap/name":"datamongoconfig",
 		"rhmap/type":"job"
@@ -16,7 +16,7 @@ var DataMongoConfigJob = `
 	"activeDeadlineSeconds": 120,
     "template": {
       "metadata": {
-        "name": "{{if isset . "name"}}{{index . "name"}}{{end}}-dataconfig-job"
+        "name": "{{index . "name"}}-dataconfig-job"
       },
       "spec": {
         "containers": [
