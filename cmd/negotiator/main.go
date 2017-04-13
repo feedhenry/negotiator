@@ -50,7 +50,9 @@ func main() {
 		redisOpts := conf.Redis()
 		redisClient := redis.NewClient(&redisOpts)
 		redisPub := status.New(redisClient)
-		logPub := &status.LogStatusPublisher{}
+		logPub := &status.LogStatusPublisher{
+			Logger: logger,
+		}
 		pubRet := status.NewMultiStatus(redisPub, logPub, logger)
 		statusRetriever = redisPub // it implments both interfaces
 		statusPublisher = pubRet
