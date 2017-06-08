@@ -1,3 +1,5 @@
+### Not currently under active development
+
 ### Negotiator 
 
 Negotiates between an RHMAP core and a OpenShift master. It understands both.
